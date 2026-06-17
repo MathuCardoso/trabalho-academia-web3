@@ -1,4 +1,6 @@
 <script setup>
+    import { vMaska } from "maska/vue";
+
     const props = defineProps({
         type: {
             type: String,
@@ -7,16 +9,19 @@
         placeholder: String,
         name: String,
         label: String,
+        width: String,
+        mask: String,
     });
 </script>
 
 <template>
-    <div class="input-group">
+    <div class="input-group" :style="{ width: width }">
         <label for="props.name">{{ props.label }}</label>
         <input
             :type="props.type"
             :placeholder="props.placeholder"
             :name="props.name"
+            v-maska="props.mask"
         />
     </div>
 </template>

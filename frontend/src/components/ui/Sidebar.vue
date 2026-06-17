@@ -7,31 +7,29 @@
     const sideBarOptions = [
         {
             name: "Dashboard",
-            route: "",
+            route: "/",
         },
         {
             name: "Alunas",
-            route: "alunas",
+            route: "/alunas",
         },
         {
             name: "Professoras",
-            route: "professoras",
+            route: "/professoras",
         },
         {
             name: "Treinos",
-            route: "treinos",
+            route: "/treinos",
         },
         {
             name: "Matrículas",
-            route: "matriculas",
+            route: "/matriculas",
         },
         {
             name: "Frequência",
-            route: "frequencias",
+            route: "/frequencias",
         },
     ];
-
-    console.log(route.name === sideBarOptions[0])
 </script>
 
 <template>
@@ -44,13 +42,15 @@
         </div>
         <nav>
             <ul>
-                <li
+                <RouterLink
                     v-for="s in sideBarOptions"
                     :key="s.name"
-                    :class="{ active: route.name === s.route }"
+                    :to="s.route"
                 >
-                    {{ s.name }}
-                </li>
+                    <li :class="{ active: route.fullPath === s.route }">
+                        {{ s.name }}
+                    </li>
+                </RouterLink>
             </ul>
         </nav>
     </div>
@@ -58,10 +58,15 @@
 
 <style scoped>
     .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
         background-color: var(--color-card);
-        border-top-right-radius: 50px;
-        width: 15vw;
+        border-right: 1px solid var(--color-pink-accent-shadow);
+        border-top-right-radius: 0px;
+        width: var(--spacing-sidebar);
         height: 100vh;
+        z-index: 50;
     }
 
     nav {
@@ -69,22 +74,52 @@
         flex-direction: column;
         align-items: center;
         margin-top: 20px;
-
-        ul {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-
-            li {
-                padding: 15px;
-                border-radius: 12px;
-            }
-            li.active {
-                background-color: var(--color-pink-accent-shadow);
-            }
-        }
     }
 
+    nav ul {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        padding: 0 20px;
+        gap: 15px;
+    }
+
+    nav ul li {
+        padding: 15px;
+        border-radius: 15px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+        color: #8c8c9a;
+        transition: color 0.1s ease-out;
+    }
+
+    /* O truque da transição no gradiente */
+    nav ul li::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            135deg,
+            rgba(228, 62, 97, 0.25) 0%,
+            rgba(228, 62, 97, 0.05) 100%
+        );
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+        z-index: -1;
+    }
+
+    nav ul li:hover::before,
+    nav ul li.active::before {
+        opacity: 1;
+    }
+
+    nav ul li:hover,
+    nav ul li.active {
+        color: #e43e61;
+    }
     .brand {
         display: flex;
         justify-content: center;

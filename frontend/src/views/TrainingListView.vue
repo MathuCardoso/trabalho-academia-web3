@@ -1,9 +1,7 @@
 <script setup>
     import MainLayout from "@/components/layout/MainLayout.vue";
-    import { provide, ref } from "vue";
-
-    provide("headerTitle", "Olá, Matheus!");
-    provide("headerDescription", "Bem-vindo ao sistema de gestão de academia");
+    import { provide } from "vue";
+    provide("headerTitle", "Listagem de Treinos");
 </script>
 
 <template>

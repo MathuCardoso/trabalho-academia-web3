@@ -10,3 +10,14 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 app.mount("#app");
+
+router.beforeResolve((to, from, next) => {
+    if (!document.startViewTransition) {
+        next();
+        return; 
+    }
+
+    document.startViewTransition(() => {
+        next();
+    });
+});

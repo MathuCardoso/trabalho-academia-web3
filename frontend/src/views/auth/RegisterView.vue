@@ -8,15 +8,39 @@
         <form>
             <h1>Cadastro</h1>
 
-            <Input label="Nome" name="name" placeholder="Insira seu Nome" />
+            <div class="flex gap-4">
+                <Input label="Nome" name="name" placeholder="Insira seu Nome" />
 
-            <Input label="Email" name="email" placeholder="Insira seu Email" />
+                <Input
+                    label="Data de Nascimento"
+                    name="dataNascimento"
+                    placeholder="Insira sua Data de Nascimento"
+                    width="100%"
+                    mask="##/##/####"
+                />
+            </div>
 
-            <Input
-                label="Senha"
-                name="password"
-                placeholder="Insira sua Senha"
-            />
+            <div class="flex gap-4">
+                <Input
+                    label="Email"
+                    name="email"
+                    placeholder="Insira seu Email"
+                />
+                <Input
+                    label="Senha"
+                    name="password"
+                    placeholder="Insira sua Senha"
+                />
+            </div>
+
+            <div class="flex gap-4">
+                <Input
+                    label="Telefone"
+                    name="telefone"
+                    placeholder="Insira seu Telefone"
+                />
+                <Input label="CPF" name="cpf" placeholder="Insira seu CPF" />
+            </div>
 
             <Button content="Entrar" />
 
@@ -38,7 +62,7 @@
         align-items: center;
     }
     form {
-        width: 450px;
+        width: fit-content;
         height: fit-content;
         display: flex;
         flex-direction: column;
