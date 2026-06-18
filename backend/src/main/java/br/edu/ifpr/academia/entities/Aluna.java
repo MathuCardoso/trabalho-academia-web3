@@ -3,6 +3,8 @@ package br.edu.ifpr.academia.entities;
 import br.edu.ifpr.academia.enums.StatusCadastro;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -17,20 +19,25 @@ public class Aluna {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "O nome é obrigatório")
+    @NotBlank(message = "O Nome é obrigatório")
     private String nome;
 
-    @NotBlank(message = "O e-mail é obrigatório")
-    @Email(message = "Informe um e-mail válido")
+    @NotBlank(message = "O E-mail é obrigatório")
+    @Email(message = "Informe um E-mail válido")
     private String email;
 
-    @NotBlank(message = "O telefone é obrigatório")
+    @NotBlank(message = "A Senha é obrigatória")
+    @Min(value = 6, message = "A senha deve conter 6 caracteres ou mais")
+    @Max(value = 64, message = "A senha deve conter até 64 caracteres")
+    private String senha;
+
+    @NotBlank(message = "O Telefone é obrigatório")
     private String telefone;
 
-    @NotBlank(message = "O cpf é obrigatório")
+    @NotBlank(message = "O CPF é obrigatório")
     private String cpf;
 
-    @NotNull(message = "A data de nascimento é obrigatória")
+    @NotNull(message = "A Data de Nascimento é obrigatória")
     private LocalDate dataNascimento;
 
     @Enumerated(EnumType.STRING)

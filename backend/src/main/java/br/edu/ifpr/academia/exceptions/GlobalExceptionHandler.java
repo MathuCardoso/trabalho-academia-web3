@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
      * MethodArgumentNotValidException.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> tratarErrosDeValidacao(MethodArgumentNotValidException exception) {
+    public ResponseEntity<Map<String, Object>> tratarErrosDeValidacao(MethodArgumentNotValidException exception) {
 
         /*
          * Nota:
@@ -35,8 +35,9 @@ public class GlobalExceptionHandler {
          * "nome" -> "O nome é obrigatório"
          * "email" -> "Informe um e-mail válido"
          */
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
         Map<String, String> erros = new HashMap<>();
-
         /*
          * Nota:
          * Aqui pegamos todos os campos que falharam na validação.
@@ -48,6 +49,7 @@ public class GlobalExceptionHandler {
         exception.getBindingResult().getFieldErrors().forEach(erro -> {
             erros.put(erro.getField(), erro.getDefaultMessage());
         });
+        response.put("errors", erros);
 
         /*
          * Nota:
@@ -57,6 +59,6 @@ public class GlobalExceptionHandler {
          * O corpo da resposta será apenas o Map com os erros,
          * sem aquele trace gigante que apareceu antes.
          */
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erros);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }

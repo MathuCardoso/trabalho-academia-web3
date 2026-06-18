@@ -30,6 +30,7 @@ public class AlunaController {
 
     @PostMapping
     public ResponseEntity<Aluna> cadastrar(@Valid @RequestBody Aluna aluna) {
+        System.out.println(aluna);
         return ResponseEntity.ok(alunaService.salvar(aluna));
     }
 
