@@ -16,7 +16,7 @@
                 placeholder="Insira sua Senha"
             />
 
-            <Button content="Entrar" />
+            <Button>Entrar</Button>
 
             <p>
                 Não possui uma conta?

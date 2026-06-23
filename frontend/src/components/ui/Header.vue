@@ -2,7 +2,7 @@
     import { inject } from "vue";
     import UserIcon from "../icons/UserIcon.vue";
     const title = inject("headerTitle");
-    const description = inject("headerDescription");
+    const description = inject("headerDescription", null);
 </script>
 
 <template>
@@ -23,13 +23,13 @@
 
 <style scoped>
     header {
-        padding-left: calc(var(--spacing-sidebar) + 3vw);
-        padding-right: 3vw;
+        width: 100%;
+        padding-left: calc(var(--spacing-sidebar) + 5vw);
+        padding-right: 5vw;
         position: fixed;
         top: 0;
         left: 0;
         height: var(--spacing-header);
-        width: 100%;
         display: flex;
         z-index: 20;
         display: flex;

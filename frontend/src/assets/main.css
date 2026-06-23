@@ -11,10 +11,14 @@
     --color-card: #14161D;
     --color-text: #2A2D36;
 
-    --color-green-light: #009940;
+    --color-success: #009940;
     --color-green-dark: #1F3D33;
 
+    --color-info: #0a2483;
+    --color-danger: rgb(185, 6, 6);
+
     --radius-card: 20px;
+    --radius-button: 12px;
     --radius-input: 12px;
 
     --spacing-sidebar: 15vw;

@@ -25,10 +25,6 @@
             name: "Matrículas",
             route: "/matriculas",
         },
-        {
-            name: "Frequência",
-            route: "/frequencias",
-        },
     ];
 </script>
 

@@ -11,13 +11,14 @@ app.use(createPinia());
 app.use(router);
 app.mount("#app");
 
-router.beforeResolve((to, from, next) => {
-    if (!document.startViewTransition) {
-        next();
-        return; 
+router.beforeResolve((to, from) => {
+    if (!document.startViewTransition || to.path === from.path) {
+        return true;
     }
 
-    document.startViewTransition(() => {
-        next();
+    return new Promise((resolve) => {
+        document.startViewTransition(async () => {
+            resolve(true);
+        });
     });
 });

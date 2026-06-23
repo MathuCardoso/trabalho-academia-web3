@@ -3,13 +3,15 @@ package br.edu.ifpr.academia.entities;
 import br.edu.ifpr.academia.enums.StatusCadastro;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 @Data
@@ -27,8 +29,8 @@ public class Aluna {
     private String email;
 
     @NotBlank(message = "A Senha é obrigatória")
-    @Min(value = 6, message = "A senha deve conter 6 caracteres ou mais")
-    @Max(value = 64, message = "A senha deve conter até 64 caracteres")
+    @Size(min = 6, message = "A senha deve conter 6 caracteres ou mais")
+    @Size(max = 64, message = "A senha deve conter até 64 caracteres")
     private String senha;
 
     @NotBlank(message = "O Telefone é obrigatório")
@@ -38,6 +40,8 @@ public class Aluna {
     private String cpf;
 
     @NotNull(message = "A Data de Nascimento é obrigatória")
+    @Past(message = "A Data de Nascimento deve ser uma data passada")
+    @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate dataNascimento;
 
     @Enumerated(EnumType.STRING)

@@ -1,9 +1,10 @@
+import AlunasView from '@/views/AlunasView.vue';
 import LoginView from "@/views/auth/LoginView.vue";
 import RegisterView from '@/views/auth/RegisterView.vue';
 import HomeView from '@/views/HomeView.vue';
-import ProfessorsListView from '@/views/ProfessorsListView.vue';
-import StudentsListView from '@/views/StudentsListView.vue';
-import TrainingListView from '@/views/TrainingListView.vue';
+import MatriculasView from '@/views/MatriculasView.vue';
+import ProfessorasView from '@/views/ProfessorasView.vue';
+import TreinosView from '@/views/TreinosView.vue';
 
 export default [
 
@@ -26,7 +27,7 @@ export default [
     {
         path: "/alunas",
         name: "alunasList",
-        component: StudentsListView,
+        component: AlunasView,
         meta: {
             title: "Alunas",
         },
@@ -34,15 +35,23 @@ export default [
     {
         path: "/professoras",
         name: "professorasList",
-        component: ProfessorsListView,
+        component: ProfessorasView,
         meta: {
             title: "Professoras",
         },
     },
     {
         path: "/treinos",
-        name: "trainingList",
-        component: TrainingListView,
+        name: "treinosList",
+        component: TreinosView,
+        meta: {
+            title: "Treinos",
+        },
+    },
+    {
+        path: "/matriculas",
+        name: "matriculasList",
+        component: MatriculasView,
         meta: {
             title: "Treinos",
         },
