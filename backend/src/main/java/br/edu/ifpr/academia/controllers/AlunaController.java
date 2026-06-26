@@ -3,10 +3,14 @@ package br.edu.ifpr.academia.controllers;
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.services.AlunaService;
 import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/alunas")
@@ -29,9 +33,14 @@ public class AlunaController {
     }
 
     @PostMapping
-    public ResponseEntity<Aluna> cadastrar(@Valid @RequestBody Aluna aluna) {
-        System.out.println(aluna);
-        return ResponseEntity.ok(alunaService.salvar(aluna));
+    public ResponseEntity<Object> cadastrar(@Valid @RequestBody Aluna aluna) {
+        alunaService.salvar(aluna);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Aluna cadastrada com sucesso.");
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")

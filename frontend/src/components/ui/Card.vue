@@ -24,8 +24,7 @@
         transition: all 0.3s ease;
         z-index: 0;
         &:hover {
-            transform: translateY(-5px);
-            box-shadow: 2px 2px 8px var(--color-pink-accent-shadow);
+            box-shadow: 0 0 8px var(--color-pink-accent-shadow);
             z-index: 0;
         }
 

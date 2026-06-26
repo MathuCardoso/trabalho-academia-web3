@@ -17,7 +17,7 @@ public class AlunaService {
     }
 
     public List<Aluna> listarTodas() {
-        return alunaRepository.findAll();
+        return alunaRepository.findAll().reversed();
     }
 
     public Aluna buscarPorId(Long id) {

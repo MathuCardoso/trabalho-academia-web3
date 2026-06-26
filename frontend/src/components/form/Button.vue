@@ -19,7 +19,7 @@
 <template>
     <button
         :type="props.type"
-        :class="[props.variant, props.class]"
+        :class="[props.variant ,props.class]"
         class="flex justify-center items-center h-fit transition-all duration-200 text-center"
     >
         <span>

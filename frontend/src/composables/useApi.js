@@ -5,7 +5,9 @@ export function useApi() {
         try {
             const response = await fetch(API_URL + uri, {
                 method: "GET",
-                headers: "content-type: application/json",
+                headers: {
+                    "content-type": "application/json",
+                },
             });
             if (!response.ok) throw new Error("Erro inesperado.");
 
@@ -33,7 +35,17 @@ export function useApi() {
 
     async function put(uri) {}
 
-    async function remove(uri) {}
+    async function remove(uri) {
+        try {
+            const response = await fetch(API_URL + uri, {
+                method: "DELETE",
+                headers: { "content-type": "application/json" },
+            });
+            return response;
+        } catch (error) {
+            return error;
+        }
+    }
 
     return {
         get,

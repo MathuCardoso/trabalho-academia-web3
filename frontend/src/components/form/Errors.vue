@@ -5,13 +5,13 @@
 </script>
 
 <template>
-    <span v-if="props.error">{{ props.error }}</span>
+    <span v-if="props.error">{{ props.error }} </span>
 </template>
 
 <style scoped>
     span {
         width: 100%;
         color: var(--color-danger);
-        font-size: .9rem;
+        font-size: 0.9rem;
     }
 </style>
