@@ -147,11 +147,11 @@
                             <option value="INICIANTE" selected>
                                 INICIANTE
                             </option>
-                            <option value="INTERMEDIÁRIO">INTERMEDIÁRIO</option>
-                            <option value="AVANÇADO">AVANÇADO</option>
+                            <option value="INTERMEDIARIO">INTERMEDIÁRIO</option>
+                            <option value="AVANCADO">AVANÇADO</option>
                         </Select>
                         <Select
-                            :model="professoraId"
+                            :model="Treino.professora?.id || ''"
                             @update-value="professoraId = $event"
                             label="Professora"
                             :error="errors['professora']"
@@ -194,27 +194,23 @@
                 </div>
                 <div class="card-group flex flex-col">
                     <label>Nível:</label>
-                    <span>{{ t.nivel }}</span>
-                </div>
-                <div class="card-group flex flex-col">
-                    <label>Nível:</label>
-                    <span>{{ t.nivel }}</span>
-                </div>
-                <div class="card-group flex flex-col">
-                    <label>Status:</label>
                     <span
-                        class="font-bold"
                         :class="{
-                            'text-success': t.status == 'ATIVO',
-                            'text-danger': t.status == 'INATIVO',
+                            'text-danger': t.nivel == 'AVANCADO',
+                            'text-yellow-400': t.nivel == 'INTERMEDIARIO',
+                            'text-success': t.nivel == 'INICIANTE',
                         }"
-                        >{{ t.status }}</span
+                        >{{ t.nivel }}</span
                     >
+                </div>
+                <div class="card-group flex flex-col">
+                    <label>Professora:</label>
+                    <span>{{ t.professora.nome }}</span>
                 </div>
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
                         <Button
-                            @click="prepareUpdate(p.id)"
+                            @click="prepareUpdate(t.id)"
                             variant="info"
                             class="hover:-translate-y-1 gap-1"
                         >

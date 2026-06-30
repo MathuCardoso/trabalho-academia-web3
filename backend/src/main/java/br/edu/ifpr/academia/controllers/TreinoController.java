@@ -43,9 +43,15 @@ public class TreinoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);    }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Treino> atualizar(@PathVariable Long id, @Valid @RequestBody Treino treino) {
+    public ResponseEntity<Object> atualizar(@PathVariable Long id, @Valid @RequestBody Treino treino) {
         treino.setId(id);
-        return ResponseEntity.ok(treinoService.salvar(treino));
+        treinoService.salvar(treino);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Treino alterado com sucesso.");
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @DeleteMapping("/{id}")

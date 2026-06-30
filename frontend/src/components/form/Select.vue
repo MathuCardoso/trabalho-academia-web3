@@ -3,15 +3,14 @@
     import Errors from "./Errors.vue";
 
     const props = defineProps({
-        model: String,
-        value: String,
+        model: String | Number,
+        value: String | Number,
         name: String,
         label: String,
         width: {
             type: String,
             default: "100%",
         },
-        mask: String,
         error: String,
     });
 
