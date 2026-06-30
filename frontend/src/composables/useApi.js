@@ -33,7 +33,21 @@ export function useApi() {
         }
     }
 
-    async function put(uri) {}
+    async function put(uri, fields) {
+        try {
+            const response = await fetch(API_URL + uri, {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ ...fields }),
+            });
+            const data = response.json();
+            if (!response.ok) throw data;
+
+            return data;
+        } catch (error) {
+            return error;
+        }
+    }
 
     async function remove(uri) {
         try {

@@ -8,14 +8,13 @@
         <Header title="Listagem de Alunas" />
         <Sidebar />
 
-        <main class="p-10">
+        <main class="p-10 w-full h-full relative">
             <slot><h1>oláaa</h1> </slot>
         </main>
     </div>
 </template>
 
 <style scoped>
-
     .wrapper {
         margin-left: calc(var(--spacing-sidebar) + 3vw);
         margin-right: 3vw;

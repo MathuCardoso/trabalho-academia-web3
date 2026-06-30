@@ -44,9 +44,15 @@ public class AlunaController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Aluna> atualizar(@PathVariable Long id, @Valid @RequestBody Aluna aluna) {
+    public ResponseEntity<Object> atualizar(@PathVariable Long id, @Valid @RequestBody Aluna aluna) {
         aluna.setId(id);
-        return ResponseEntity.ok(alunaService.salvar(aluna));
+        alunaService.salvar(aluna);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Aluna alterada com sucesso.");
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @DeleteMapping("/{id}")

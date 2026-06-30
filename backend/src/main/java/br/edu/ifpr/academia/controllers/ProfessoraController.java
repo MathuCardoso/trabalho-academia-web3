@@ -3,11 +3,13 @@ package br.edu.ifpr.academia.controllers;
 import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.services.ProfessoraService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 @RestController
 @RequestMapping("/api/professoras")
 public class ProfessoraController {
@@ -29,14 +31,25 @@ public class ProfessoraController {
     }
 
     @PostMapping
-    public ResponseEntity<Professora> cadastrar(@Valid @RequestBody Professora professora) {
-        return ResponseEntity.ok(professoraService.salvar(professora));
-    }
+    public ResponseEntity<Object> cadastrar(@Valid @RequestBody Professora professora) {
+        professoraService.salvar(professora);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Professora cadastrada com sucesso.");
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);    }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Professora> atualizar(@PathVariable Long id, @Valid @RequestBody Professora professora) {
+    public ResponseEntity<Object> atualizar(@PathVariable Long id, @Valid @RequestBody Professora professora) {
         professora.setId(id);
-        return ResponseEntity.ok(professoraService.salvar(professora));
+        professoraService.salvar(professora);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Professora alterada com sucesso.");
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @DeleteMapping("/{id}")

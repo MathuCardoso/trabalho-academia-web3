@@ -2,7 +2,6 @@ package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.entities.Treino;
-import br.edu.ifpr.academia.enums.StatusCadastro;
 import br.edu.ifpr.academia.repositories.TreinoRepository;
 import org.springframework.stereotype.Service;
 
@@ -48,17 +47,5 @@ public class TreinoService {
 
     public void excluir(Long id) {
         treinoRepository.deleteById(id);
-    }
-
-    public Treino ativar(Long id) {
-        Treino treino = buscarPorId(id);
-        treino.setStatus(StatusCadastro.ATIVO);
-        return treinoRepository.save(treino);
-    }
-
-    public Treino inativar(Long id) {
-        Treino treino = buscarPorId(id);
-        treino.setStatus(StatusCadastro.INATIVO);
-        return treinoRepository.save(treino);
     }
 }

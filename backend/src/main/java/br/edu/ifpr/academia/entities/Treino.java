@@ -29,7 +29,4 @@ public class Treino {
     @JoinColumn(name = "professora_id")
     @NotNull(message = "A professora é obrigatória")
     private Professora professora;
-
-    @Enumerated(EnumType.STRING)
-    private StatusCadastro status = StatusCadastro.ATIVO;
 }

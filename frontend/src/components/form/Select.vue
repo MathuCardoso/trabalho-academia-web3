@@ -3,12 +3,8 @@
     import Errors from "./Errors.vue";
 
     const props = defineProps({
-        type: {
-            type: String,
-            default: "text",
-        },
         model: String,
-        placeholder: String,
+        value: String,
         name: String,
         label: String,
         width: {
@@ -25,19 +21,21 @@
 <template>
     <div class="input-group">
         <label for="props.name">{{ props.label }}</label>
-        <input
+        <select
             :value="props.model"
             :name="props.model"
             :type="props.type"
             :placeholder="props.placeholder"
             v-maska="props.mask"
-            @input="emit('updateValue', $event.target.value)"
-        />
+            @change="emit('updateValue', $event.target.value)"
+        >
+            <slot> </slot>
+        </select>
         <Errors :error="props.error" />
     </div>
 </template>
 
-<style scoped>
+<style>
     .input-group {
         display: flex;
         flex-direction: column;
@@ -46,18 +44,19 @@
         label {
             color: white;
         }
-        input {
+        select {
             color: white;
             border: 2px solid var(--color-pink-accent);
             border-radius: var(--radius-input);
             padding: 8px;
             transition: all 0.2s ease;
             width: v-bind("props.width");
-            &::placeholder {
-                font-size: 0.9rem;
-            }
             &:hover {
                 box-shadow: 2px 2px 10px var(--color-pink-accent-shadow);
+            }
+            option {
+                background-color: black;
+                color: var(--color-pink-accent);
             }
         }
     }

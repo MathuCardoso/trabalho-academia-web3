@@ -22,7 +22,7 @@
         :class="[props.variant ,props.class]"
         class="flex justify-center items-center h-fit transition-all duration-200 text-center"
     >
-        <span>
+        <span class="relative">
             <slot> </slot>
         </span>
         <slot name="icon"> </slot>

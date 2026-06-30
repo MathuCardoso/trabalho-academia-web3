@@ -3,6 +3,8 @@ package br.edu.ifpr.academia.services;
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.enums.StatusCadastro;
 import br.edu.ifpr.academia.repositories.AlunaRepository;
+
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,7 +19,7 @@ public class AlunaService {
     }
 
     public List<Aluna> listarTodas() {
-        return alunaRepository.findAll().reversed();
+        return alunaRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
 
     public Aluna buscarPorId(Long id) {

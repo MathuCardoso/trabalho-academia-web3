@@ -1,7 +1,7 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
     import Input from "@/components/form/Input.vue";
-    import { postAluna } from "@/services/alunasService";
+    import { postAluna } from "@/services/alunaService";
     import { ref } from "vue";
 
     const Aluna = ref({

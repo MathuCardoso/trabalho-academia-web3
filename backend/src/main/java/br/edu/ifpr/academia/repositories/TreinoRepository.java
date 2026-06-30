@@ -10,9 +10,4 @@ import java.util.List;
 @Repository
 public interface TreinoRepository extends JpaRepository<Treino, Long> {
 
-    /*
-     * Busca treinos pelo status.
-     * Exemplo: ATIVO ou INATIVO.
-     */
-    List<Treino> findByStatus(StatusCadastro status);
 }
