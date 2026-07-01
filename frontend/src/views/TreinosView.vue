@@ -245,5 +245,3 @@
         </section>
     </MainLayout>
 </template>
-
-<style scoped></style>

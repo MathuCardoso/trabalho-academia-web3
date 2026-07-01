@@ -1,17 +1,17 @@
 package br.edu.ifpr.academia.controllers;
 
+import br.edu.ifpr.academia.dtos.AlunaRequest;
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.services.AlunaService;
 import jakarta.validation.Valid;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+/*
+ * Controller responsavel pelas rotas de Aluna.
+ */
 @RestController
 @RequestMapping("/api/alunas")
 public class AlunaController {
@@ -32,27 +32,33 @@ public class AlunaController {
         return ResponseEntity.ok(alunaService.buscarPorId(id));
     }
 
+    /*
+     * Cadastra uma aluna e cria automaticamente o Usuario dela.
+     *
+     * O front deve enviar:
+     * - nome
+     * - email
+     * - telefone
+     * - cpf
+     * - dataNascimento
+     * - senhaInicial
+     */
     @PostMapping
-    public ResponseEntity<Object> cadastrar(@Valid @RequestBody Aluna aluna) {
-        alunaService.salvar(aluna);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Aluna cadastrada com sucesso.");
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<Aluna> cadastrar(@Valid @RequestBody AlunaRequest request) {
+        return ResponseEntity.ok(alunaService.cadastrarComUsuario(request));
     }
 
+    /*
+     * Atualiza apenas dados cadastrais.
+     *
+     * Nao altera senha.
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<Object> atualizar(@PathVariable Long id, @Valid @RequestBody Aluna aluna) {
-        aluna.setId(id);
-        alunaService.salvar(aluna);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Aluna alterada com sucesso.");
-
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+    public ResponseEntity<Aluna> atualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody Aluna aluna
+    ) {
+        return ResponseEntity.ok(alunaService.atualizar(id, aluna));
     }
 
     @DeleteMapping("/{id}")
@@ -61,25 +67,11 @@ public class AlunaController {
         return ResponseEntity.noContent().build();
     }
 
-    /*
-     * Nova alteracao:
-     * Rota para ativar uma aluna pelo ID.
-     *
-     * Exemplo:
-     * PATCH /api/alunas/1/ativar
-     */
     @PatchMapping("/{id}/ativar")
     public ResponseEntity<Aluna> ativar(@PathVariable Long id) {
         return ResponseEntity.ok(alunaService.ativar(id));
     }
 
-    /*
-     * Nova alteracao:
-     * Rota para inativar uma aluna pelo ID.
-     *
-     * Exemplo:
-     * PATCH /api/alunas/1/inativar
-     */
     @PatchMapping("/{id}/inativar")
     public ResponseEntity<Aluna> inativar(@PathVariable Long id) {
         return ResponseEntity.ok(alunaService.inativar(id));

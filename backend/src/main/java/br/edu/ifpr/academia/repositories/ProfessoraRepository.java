@@ -6,7 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
+/*
+ * Repository da entidade Professora.
+ */
 @Repository
 public interface ProfessoraRepository extends JpaRepository<Professora, Long> {
 
@@ -15,4 +19,25 @@ public interface ProfessoraRepository extends JpaRepository<Professora, Long> {
      * Exemplo: ATIVO ou INATIVO.
      */
     List<Professora> findByStatus(StatusCadastro status);
+
+    /*
+     * Busca uma professora pelo CREF.
+     *
+     * O CREF tambem sera usado como login do usuario da professora.
+     */
+    Optional<Professora> findByCref(String cref);
+
+    /*
+     * Verifica se ja existe uma professora com esse CREF.
+     *
+     * Usado para impedir cadastro duplicado.
+     */
+    boolean existsByCref(String cref);
+
+    /*
+     * Verifica se ja existe uma professora com esse e-mail.
+     *
+     * Usado para impedir cadastro duplicado.
+     */
+    boolean existsByEmail(String email);
 }

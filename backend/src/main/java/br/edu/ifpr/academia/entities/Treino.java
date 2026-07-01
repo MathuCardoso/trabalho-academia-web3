@@ -7,6 +7,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+/*
+ * Entidade que representa um treino.
+ *
+ * Cada treino pertence a uma professora.
+ * A aluna nao se liga diretamente ao treino.
+ * A ligacao entre aluna e treino acontece pela Matricula.
+ */
 @Entity
 @Data
 public class Treino {
@@ -15,18 +22,28 @@ public class Treino {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "O nome do treino é obrigatório")
+    @NotBlank(message = "O nome do treino e obrigatorio")
     private String nome;
 
-    @NotBlank(message = "A descrição do treino é obrigatória")
+    @NotBlank(message = "A descricao do treino e obrigatoria")
     private String descricao;
 
-    @NotNull(message = "O nível do treino é obrigatório")
+    @NotNull(message = "O nivel do treino e obrigatorio")
     @Enumerated(EnumType.STRING)
     private NivelTreino nivel;
 
+    /*
+     * Status do treino.
+     * Permite inativar treino sem excluir do banco.
+     */
+    @Enumerated(EnumType.STRING)
+    private StatusCadastro status = StatusCadastro.ATIVO;
+
+    /*
+     * Professora responsavel pelo treino.
+     */
+    @NotNull(message = "A professora e obrigatoria")
     @ManyToOne
     @JoinColumn(name = "professora_id")
-    @NotNull(message = "A professora é obrigatória")
     private Professora professora;
 }

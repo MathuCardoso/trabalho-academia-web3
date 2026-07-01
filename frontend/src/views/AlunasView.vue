@@ -67,7 +67,7 @@
 
     async function sendDeleteRequest(id) {
         deleteLoading.value = true;
-        response.value = await deleteAluna(id);
+        await deleteAluna(id);
         alunas.value = await getAlunas();
 
         modalConfirmRemoveAluna.value = false;
@@ -226,7 +226,10 @@
                     <label>Status:</label>
                     <span
                         class="font-bold"
-                        :class="{ 'text-success': a.status == 'ATIVO' }"
+                        :class="{
+                            'text-success': a.status == 'ATIVO',
+                            'text-danger': a.status == 'INATIVO',
+                        }"
                         >{{ a.status }}</span
                     >
                 </div>

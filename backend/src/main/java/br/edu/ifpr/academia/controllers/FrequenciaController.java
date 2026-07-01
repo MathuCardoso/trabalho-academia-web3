@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/*
+ * Controller responsavel pelas rotas de Frequencia.
+ */
 @RestController
 @RequestMapping("/api/frequencias")
 public class FrequenciaController {
@@ -28,44 +31,43 @@ public class FrequenciaController {
         return ResponseEntity.ok(frequenciaService.buscarPorId(id));
     }
 
+    /*
+     * Lista frequencias de uma aluna.
+     */
+    @GetMapping("/aluna/{alunaId}")
+    public List<Frequencia> listarPorAluna(@PathVariable Long alunaId) {
+        return frequenciaService.listarPorAluna(alunaId);
+    }
+
+    /*
+     * Cadastra frequencia manualmente.
+     */
     @PostMapping
     public ResponseEntity<Frequencia> cadastrar(@Valid @RequestBody Frequencia frequencia) {
         return ResponseEntity.ok(frequenciaService.salvar(frequencia));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Frequencia> atualizar(@PathVariable Long id, @Valid @RequestBody Frequencia frequencia) {
-        frequencia.setId(id);
-        return ResponseEntity.ok(frequenciaService.salvar(frequencia));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        frequenciaService.excluir(id);
-        return ResponseEntity.noContent().build();
-    }
-
     /*
-     * Nova alteracao:
-     * Registra o check-in de uma aluna pelo ID.
+     * Registra check-in automatico da aluna.
      *
-     * Exemplo:
-     * POST /api/frequencias/checkin/1
+     * A aluna precisa ter matricula ATIVA.
      */
     @PostMapping("/checkin/{alunaId}")
     public ResponseEntity<Frequencia> registrarCheckin(@PathVariable Long alunaId) {
         return ResponseEntity.ok(frequenciaService.registrarCheckin(alunaId));
     }
 
-    /*
-     * Nova alteracao:
-     * Lista todas as frequencias de uma aluna pelo ID.
-     *
-     * Exemplo:
-     * GET /api/frequencias/aluna/1
-     */
-    @GetMapping("/aluna/{alunaId}")
-    public List<Frequencia> listarPorAluna(@PathVariable Long alunaId) {
-        return frequenciaService.listarPorAluna(alunaId);
+    @PutMapping("/{id}")
+    public ResponseEntity<Frequencia> atualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody Frequencia frequencia
+    ) {
+        return ResponseEntity.ok(frequenciaService.atualizar(id, frequencia));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        frequenciaService.excluir(id);
+        return ResponseEntity.noContent().build();
     }
 }

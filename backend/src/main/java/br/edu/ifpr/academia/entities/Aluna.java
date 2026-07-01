@@ -2,48 +2,42 @@ package br.edu.ifpr.academia.entities;
 
 import br.edu.ifpr.academia.enums.StatusCadastro;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
+/*
+ * Entidade com os dados cadastrais da aluna.
+ *
+ * A Aluna NAO tem senha.
+ * O acesso dela fica na entidade Usuario.
+ */
 @Entity
-@Data
+@Getter
+@Setter
 public class Aluna {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "O Nome é obrigatório")
+    @Column(nullable = false, length = 100)
     private String nome;
 
-    @NotBlank(message = "O E-mail é obrigatório")
-    @Email(message = "Informe um E-mail válido")
+    @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    @NotBlank(message = "A Senha é obrigatória")
-    @Size(min = 6, message = "A senha deve conter 6 caracteres ou mais")
-    @Size(max = 64, message = "A senha deve conter até 64 caracteres")
-    private String senha;
-
-    @NotBlank(message = "O Telefone é obrigatório")
+    @Column(nullable = false, length = 15)
     private String telefone;
 
-    @NotBlank(message = "O CPF é obrigatório")
+    @Column(nullable = false, unique = true, length = 14)
     private String cpf;
 
-    @NotNull(message = "A Data de Nascimento é obrigatória")
-    @Past(message = "A Data de Nascimento deve ser uma data passada")
-    @JsonFormat(pattern = "dd/MM/yyyy")
+    @Column(nullable = false)
     private LocalDate dataNascimento;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private StatusCadastro status = StatusCadastro.ATIVO;
 }

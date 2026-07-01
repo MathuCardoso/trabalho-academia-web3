@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 
+/*
+ * Service responsavel pelas regras de negocio de Matricula.
+ */
 @Service
 public class MatriculaService {
 
@@ -27,39 +30,54 @@ public class MatriculaService {
         this.treinoService = treinoService;
     }
 
+    /*
+     * Lista todas as matriculas.
+     */
     public List<Matricula> listarTodas() {
         return matriculaRepository.findAll();
     }
 
+    /*
+     * Busca matricula pelo ID.
+     */
     public Matricula buscarPorId(Long id) {
         return matriculaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Matricula nao encontrada"));
     }
 
+    /*
+     * Lista matriculas de uma aluna.
+     */
+    public List<Matricula> listarPorAluna(Long alunaId) {
+        return matriculaRepository.findByAlunaId(alunaId);
+    }
+
+    /*
+     * Lista matriculas de alunas vinculadas aos treinos de uma professora.
+     */
+    public List<Matricula> listarPorProfessora(Long professoraId) {
+        return matriculaRepository.findByTreinoProfessoraId(professoraId);
+    }
+
+    /*
+     * Salva matricula.
+     *
+     * Regras:
+     * - buscar Aluna completa
+     * - buscar Treino completo
+     * - se vencimento passou, status = VENCIDA
+     */
     public Matricula salvar(Matricula matricula) {
-        /*
-         * Antes de salvar, buscamos a aluna completa no banco.
-         * Isso evita retornar aluna apenas com id e campos nulos.
-         */
         if (matricula.getAluna() != null && matricula.getAluna().getId() != null) {
             Aluna aluna = alunaService.buscarPorId(matricula.getAluna().getId());
             matricula.setAluna(aluna);
         }
 
-        /*
-         * Antes de salvar, buscamos o treino completo no banco.
-         * Isso evita retornar treino apenas com id e campos nulos.
-         */
         if (matricula.getTreino() != null && matricula.getTreino().getId() != null) {
             Treino treino = treinoService.buscarPorId(matricula.getTreino().getId());
             matricula.setTreino(treino);
         }
 
-        /*
-         * Regra:
-         * Se a data de vencimento for anterior a data atual,
-         * a matricula ja entra como VENCIDA.
-         */
         if (matricula.getDataVencimento().isBefore(LocalDate.now())) {
             matricula.setStatus(StatusMatricula.VENCIDA);
         }
@@ -67,23 +85,57 @@ public class MatriculaService {
         return matriculaRepository.save(matricula);
     }
 
+    /*
+     * Atualiza matricula.
+     */
+    public Matricula atualizar(Long id, Matricula dadosAtualizados) {
+        Matricula matricula = buscarPorId(id);
+
+        if (dadosAtualizados.getAluna() != null && dadosAtualizados.getAluna().getId() != null) {
+            Aluna aluna = alunaService.buscarPorId(dadosAtualizados.getAluna().getId());
+            matricula.setAluna(aluna);
+        }
+
+        if (dadosAtualizados.getTreino() != null && dadosAtualizados.getTreino().getId() != null) {
+            Treino treino = treinoService.buscarPorId(dadosAtualizados.getTreino().getId());
+            matricula.setTreino(treino);
+        }
+
+        matricula.setDataInicio(dadosAtualizados.getDataInicio());
+        matricula.setDataVencimento(dadosAtualizados.getDataVencimento());
+
+        if (dadosAtualizados.getDataVencimento().isBefore(LocalDate.now())) {
+            matricula.setStatus(StatusMatricula.VENCIDA);
+        } else {
+            matricula.setStatus(dadosAtualizados.getStatus());
+        }
+
+        return matriculaRepository.save(matricula);
+    }
+
+    /*
+     * Exclui matricula.
+     */
     public void excluir(Long id) {
         matriculaRepository.deleteById(id);
     }
 
+    /*
+     * Lista matriculas vencidas.
+     */
     public List<Matricula> listarVencidas() {
         return matriculaRepository.findByStatus(StatusMatricula.VENCIDA);
     }
 
+    /*
+     * Lista matriculas que vencem nos proximos 7 dias.
+     *
+     * Traz apenas matriculas ATIVAS.
+     */
     public List<Matricula> listarAVencer() {
         LocalDate hoje = LocalDate.now();
         LocalDate limite = hoje.plusDays(7);
 
-        /*
-         * Nova regra:
-         * Lista apenas matriculas ATIVAS que vencem nos proximos 7 dias.
-         * Matriculas CANCELADAS nao devem aparecer aqui.
-         */
         return matriculaRepository.findByStatusAndDataVencimentoBetween(
                 StatusMatricula.ATIVA,
                 hoje,
@@ -91,9 +143,21 @@ public class MatriculaService {
         );
     }
 
+    /*
+     * Cancela matricula.
+     */
     public Matricula cancelar(Long id) {
         Matricula matricula = buscarPorId(id);
         matricula.setStatus(StatusMatricula.CANCELADA);
         return matriculaRepository.save(matricula);
+    }
+
+    /*
+     * Verifica se uma aluna possui matricula ativa.
+     *
+     * Usado para validar check-in.
+     */
+    public boolean alunaPossuiMatriculaAtiva(Long alunaId) {
+        return matriculaRepository.existsByAlunaIdAndStatus(alunaId, StatusMatricula.ATIVA);
     }
 }

@@ -135,7 +135,7 @@
                                 :value="a.id"
                                 :key="a.id"
                             >
-                                {{ a.nome - a.cpf }}
+                                {{ a.nome }} - {{ a.cpf }}
                             </option>
                         </Select>
                         <Select
@@ -149,7 +149,7 @@
                                 :value="t.id"
                                 :key="t.id"
                             >
-                                {{ t.nome - t.nivel }}
+                                {{ t.nome }} - {{ t.nivel }}
                             </option>
                         </Select>
                     </div>

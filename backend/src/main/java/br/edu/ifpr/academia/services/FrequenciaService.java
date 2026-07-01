@@ -8,32 +8,59 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/*
+ * Service responsavel pelas regras de negocio de Frequencia.
+ */
 @Service
 public class FrequenciaService {
 
     private final FrequenciaRepository frequenciaRepository;
     private final AlunaService alunaService;
+    private final MatriculaService matriculaService;
 
-    public FrequenciaService(FrequenciaRepository frequenciaRepository, AlunaService alunaService) {
+    public FrequenciaService(
+            FrequenciaRepository frequenciaRepository,
+            AlunaService alunaService,
+            MatriculaService matriculaService
+    ) {
         this.frequenciaRepository = frequenciaRepository;
         this.alunaService = alunaService;
+        this.matriculaService = matriculaService;
     }
 
+    /*
+     * Lista todas as frequencias.
+     */
     public List<Frequencia> listarTodas() {
         return frequenciaRepository.findAll();
     }
 
+    /*
+     * Busca frequencia pelo ID.
+     */
     public Frequencia buscarPorId(Long id) {
         return frequenciaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Frequencia nao encontrada"));
     }
 
+    /*
+     * Lista frequencias de uma aluna.
+     */
+    public List<Frequencia> listarPorAluna(Long alunaId) {
+        return frequenciaRepository.findByAlunaId(alunaId);
+    }
+
+    /*
+     * Salva frequencia.
+     *
+     * Se dataHoraEntrada vier nula, registra o horario atual.
+     */
     public Frequencia salvar(Frequencia frequencia) {
-        /*
-         * Regra:
-         * Se a data/hora de entrada nao for enviada,
-         * o sistema registra automaticamente o horario atual.
-         */
+        if (frequencia.getAluna() != null && frequencia.getAluna().getId() != null) {
+            Aluna aluna = alunaService.buscarPorId(frequencia.getAluna().getId());
+            frequencia.setAluna(aluna);
+        }
+
         if (frequencia.getDataHoraEntrada() == null) {
             frequencia.setDataHoraEntrada(LocalDateTime.now());
         }
@@ -41,19 +68,22 @@ public class FrequenciaService {
         return frequenciaRepository.save(frequencia);
     }
 
-    public void excluir(Long id) {
-        frequenciaRepository.deleteById(id);
-    }
-
     /*
-     * Nova alteracao:
-     * Registra o check-in de uma aluna pelo ID.
+     * Registra check-in.
      *
-     * O sistema busca a aluna, cria uma nova frequencia
-     * e registra automaticamente a data/hora atual.
+     * Regras:
+     * - aluna precisa existir
+     * - aluna precisa ter matricula ATIVA
+     * - data/hora atual e registrada automaticamente
      */
     public Frequencia registrarCheckin(Long alunaId) {
         Aluna aluna = alunaService.buscarPorId(alunaId);
+
+        boolean possuiMatriculaAtiva = matriculaService.alunaPossuiMatriculaAtiva(alunaId);
+
+        if (!possuiMatriculaAtiva) {
+            throw new RuntimeException("Aluna nao possui matricula ativa");
+        }
 
         Frequencia frequencia = new Frequencia();
         frequencia.setAluna(aluna);
@@ -63,10 +93,25 @@ public class FrequenciaService {
     }
 
     /*
-     * Nova alteracao:
-     * Lista todas as frequencias de uma aluna especifica.
+     * Atualiza frequencia.
      */
-    public List<Frequencia> listarPorAluna(Long alunaId) {
-        return frequenciaRepository.findByAlunaId(alunaId);
+    public Frequencia atualizar(Long id, Frequencia dadosAtualizados) {
+        Frequencia frequencia = buscarPorId(id);
+
+        if (dadosAtualizados.getAluna() != null && dadosAtualizados.getAluna().getId() != null) {
+            Aluna aluna = alunaService.buscarPorId(dadosAtualizados.getAluna().getId());
+            frequencia.setAluna(aluna);
+        }
+
+        frequencia.setDataHoraEntrada(dadosAtualizados.getDataHoraEntrada());
+
+        return frequenciaRepository.save(frequencia);
+    }
+
+    /*
+     * Exclui frequencia.
+     */
+    public void excluir(Long id) {
+        frequenciaRepository.deleteById(id);
     }
 }

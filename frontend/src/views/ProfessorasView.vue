@@ -96,7 +96,7 @@
             v-if="pageLoading"
             class="absolute right-1/2 top-1/2 -translate-1/2"
         />
-        <nav class="mb-4 grid grid-cols-5 place-items-center">
+        <nav class="mb-4 grid grid-cols-4 place-items-center">
             <Button
                 bg="var(--color-success)"
                 color="black"
