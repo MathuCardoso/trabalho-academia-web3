@@ -33,7 +33,7 @@ public class Aluna {
 
     @Column(nullable = false, unique = true, length = 14)
     private String cpf;
-
+    
     @Column(nullable = false)
     private LocalDate dataNascimento;
 
