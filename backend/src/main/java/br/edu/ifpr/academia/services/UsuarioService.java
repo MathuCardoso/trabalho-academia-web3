@@ -6,7 +6,7 @@ import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.PerfilUsuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
 import br.edu.ifpr.academia.repositories.UsuarioRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,23 +21,18 @@ import java.util.List;
  * - status de acesso
  * - vinculo opcional com Aluna ou Professora
  *
- * Importante:
- * A senha fica aqui, nao em Aluna nem em Professora.
  */
 @Service
 public class UsuarioService {
 
+    private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
 
-    /*
-     * BCryptPasswordEncoder usado para criptografar e validar senhas.
-     *
-     * Nunca salvar senha pura no banco.
-     */
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-    public UsuarioService(UsuarioRepository usuarioRepository) {
+    public UsuarioService(
+            UsuarioRepository usuarioRepository,
+            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /*
@@ -77,7 +72,7 @@ public class UsuarioService {
 
         Usuario usuario = new Usuario();
         usuario.setLogin(login);
-        usuario.setSenha(passwordEncoder.encode(senha));
+        usuario.setSenha(this.passwordEncoder.encode(senha));
         usuario.setPerfil(PerfilUsuario.ADMIN);
         usuario.setStatus(StatusCadastro.ATIVO);
 
@@ -233,12 +228,5 @@ public class UsuarioService {
      */
     public void excluir(Long id) {
         usuarioRepository.deleteById(id);
-    }
-
-    /*
-     * Retorna o encoder para o AuthService validar senha.
-     */
-    public BCryptPasswordEncoder getPasswordEncoder() {
-        return passwordEncoder;
     }
 }

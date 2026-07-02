@@ -5,6 +5,8 @@ import br.edu.ifpr.academia.dtos.LoginResponse;
 import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.PerfilUsuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /*
@@ -22,14 +24,19 @@ public class AuthService {
 
     private final UsuarioService usuarioService;
     private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
     /*
      * Injetamos UsuarioService para buscar usuario e validar senha.
      * Injetamos JwtService para gerar o token JWT apos o login correto.
      */
-    public AuthService(UsuarioService usuarioService, JwtService jwtService) {
+    public AuthService(
+            UsuarioService usuarioService,
+            JwtService jwtService,
+            PasswordEncoder passwordEncoder) {
         this.usuarioService = usuarioService;
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /*
@@ -63,7 +70,7 @@ public class AuthService {
          * request.getSenha() = senha digitada no login
          * usuario.getSenha() = senha criptografada no banco
          */
-        boolean senhaValida = usuarioService.getPasswordEncoder()
+        boolean senhaValida = this.passwordEncoder
                 .matches(request.getSenha(), usuario.getSenha());
 
         if (!senhaValida) {
@@ -125,7 +132,6 @@ public class AuthService {
                 usuario.getStatus(),
                 alunaId,
                 professoraId,
-                nome
-        );
+                nome);
     }
 }
