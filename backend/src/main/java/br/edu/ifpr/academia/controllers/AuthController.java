@@ -8,7 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /*
- * Controller responsavel pelas rotas de autenticacao.
+ * Controller responsavel pela autenticacao.
+ *
+ * Esta rota fica publica no SecurityConfig:
+ * /api/auth/login
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -20,22 +23,8 @@ public class AuthController {
         this.authService = authService;
     }
 
-    /*
-     * Rota de login.
-     *
-     * Recebe:
-     * - login
-     * - senha
-     *
-     * Retorna:
-     * - id do usuario
-     * - perfil
-     * - nome
-     * - id da aluna ou professora, quando existir
-     */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(authService.login(request));
     }
 }

@@ -4,6 +4,7 @@ import br.edu.ifpr.academia.entities.Matricula;
 import br.edu.ifpr.academia.services.MatriculaService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,62 +22,49 @@ public class MatriculaController {
         this.matriculaService = matriculaService;
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
     @GetMapping
     public List<Matricula> listarTodas() {
         return matriculaService.listarTodas();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
     @GetMapping("/{id}")
     public ResponseEntity<Matricula> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(matriculaService.buscarPorId(id));
     }
 
-    /*
-     * Lista matriculas de uma aluna.
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
     @GetMapping("/aluna/{alunaId}")
     public List<Matricula> listarPorAluna(@PathVariable Long alunaId) {
         return matriculaService.listarPorAluna(alunaId);
     }
 
-    /*
-     * Lista matriculas de alunas vinculadas aos treinos de uma professora.
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
     @GetMapping("/professora/{professoraId}")
     public List<Matricula> listarPorProfessora(@PathVariable Long professoraId) {
         return matriculaService.listarPorProfessora(professoraId);
     }
 
-    /*
-     * Lista matriculas vencidas.
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
     @GetMapping("/vencidas")
     public List<Matricula> listarVencidas() {
         return matriculaService.listarVencidas();
     }
 
-    /*
-     * Lista matriculas ativas que vencem nos proximos 7 dias.
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
     @GetMapping("/a-vencer")
     public List<Matricula> listarAVencer() {
         return matriculaService.listarAVencer();
     }
 
-    /*
-     * Cadastra matricula.
-     *
-     * O JSON deve enviar:
-     * - aluna com id
-     * - treino com id
-     * - dataInicio
-     * - dataVencimento
-     */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Matricula> cadastrar(@Valid @RequestBody Matricula matricula) {
         return ResponseEntity.ok(matriculaService.salvar(matricula));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Matricula> atualizar(
             @PathVariable Long id,
@@ -85,14 +73,16 @@ public class MatriculaController {
         return ResponseEntity.ok(matriculaService.atualizar(id, matricula));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/cancelar")
+    public ResponseEntity<Matricula> cancelar(@PathVariable Long id) {
+        return ResponseEntity.ok(matriculaService.cancelar(id));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         matriculaService.excluir(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/cancelar")
-    public ResponseEntity<Matricula> cancelar(@PathVariable Long id) {
-        return ResponseEntity.ok(matriculaService.cancelar(id));
     }
 }

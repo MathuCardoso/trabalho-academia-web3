@@ -4,6 +4,7 @@ import br.edu.ifpr.academia.entities.Frequencia;
 import br.edu.ifpr.academia.services.FrequenciaService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,42 +22,37 @@ public class FrequenciaController {
         this.frequenciaService = frequenciaService;
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
     @GetMapping
     public List<Frequencia> listarTodas() {
         return frequenciaService.listarTodas();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
     @GetMapping("/{id}")
     public ResponseEntity<Frequencia> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(frequenciaService.buscarPorId(id));
     }
 
-    /*
-     * Lista frequencias de uma aluna.
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
     @GetMapping("/aluna/{alunaId}")
     public List<Frequencia> listarPorAluna(@PathVariable Long alunaId) {
         return frequenciaService.listarPorAluna(alunaId);
     }
 
-    /*
-     * Cadastra frequencia manualmente.
-     */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Frequencia> cadastrar(@Valid @RequestBody Frequencia frequencia) {
         return ResponseEntity.ok(frequenciaService.salvar(frequencia));
     }
 
-    /*
-     * Registra check-in automatico da aluna.
-     *
-     * A aluna precisa ter matricula ATIVA.
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'ALUNA')")
     @PostMapping("/checkin/{alunaId}")
     public ResponseEntity<Frequencia> registrarCheckin(@PathVariable Long alunaId) {
         return ResponseEntity.ok(frequenciaService.registrarCheckin(alunaId));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Frequencia> atualizar(
             @PathVariable Long id,
@@ -65,6 +61,7 @@ public class FrequenciaController {
         return ResponseEntity.ok(frequenciaService.atualizar(id, frequencia));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         frequenciaService.excluir(id);

@@ -1,271 +1,374 @@
 #!/bin/bash
 
-API="http://localhost:8080"
+BASE_URL="http://localhost:8080"
 TIMESTAMP=$(date +%s)
 
-CPF_ALUNA="987654${TIMESTAMP: -5}"
-EMAIL_ALUNA="beatriz$TIMESTAMP@email.com"
-
-CREF_PROFESSORA="CREF$TIMESTAMP"
-EMAIL_PROFESSORA="carla$TIMESTAMP@email.com"
-
-HOJE=$(date +%F)
-VENCE_EM_5_DIAS=$(date -d "+5 days" +%F)
-VENCIDA=$(date -d "-10 days" +%F)
-INICIO_VENCIDA=$(date -d "-20 days" +%F)
-
-echo "=============================="
-echo "TESTE COMPLETO DA API"
-echo "=============================="
-
-echo ""
-echo "API: $API"
+echo "=========================================="
+echo " TESTE COMPLETO API ACADEMIA COM JWT"
+echo "=========================================="
 echo ""
 
-echo "=============================="
-echo "1 - Testando login do ADMIN"
-echo "=============================="
+ADMIN_LOGIN="admin"
+ADMIN_SENHA="admin123"
 
-curl -s -X POST "$API/api/auth/login" \
+ALUNA_NOME="Beatriz Lima"
+ALUNA_EMAIL="beatriz${TIMESTAMP}@email.com"
+ALUNA_TELEFONE="45988887777"
+
+ALUNA_CPF=$(python3 - <<'PY'
+import random
+
+def gerar_cpf():
+    while True:
+        numeros = [random.randint(0, 9) for _ in range(9)]
+
+        if len(set(numeros)) == 1:
+            continue
+
+        soma = sum(numeros[i] * (10 - i) for i in range(9))
+        digito1 = 11 - (soma % 11)
+        digito1 = 0 if digito1 >= 10 else digito1
+        numeros.append(digito1)
+
+        soma = sum(numeros[i] * (11 - i) for i in range(10))
+        digito2 = 11 - (soma % 11)
+        digito2 = 0 if digito2 >= 10 else digito2
+        numeros.append(digito2)
+
+        return f"{numeros[0]}{numeros[1]}{numeros[2]}.{numeros[3]}{numeros[4]}{numeros[5]}.{numeros[6]}{numeros[7]}{numeros[8]}-{numeros[9]}{numeros[10]}"
+
+print(gerar_cpf())
+PY
+)
+
+ALUNA_SENHA="aluna123"
+
+PROF_NOME="Camila Souza"
+PROF_EMAIL="camila${TIMESTAMP}@email.com"
+PROF_CREF="CREF${TIMESTAMP: -6}"
+PROF_ESPECIALIDADE="Musculacao"
+PROF_SENHA="prof123"
+
+echo "------------------------------------------"
+echo "1. LOGIN ADMIN"
+echo "------------------------------------------"
+
+TOKEN_ADMIN=$(curl -s -X POST "$BASE_URL/api/auth/login" \
 -H "Content-Type: application/json" \
--d '{
-  "login": "admin",
-  "senha": "admin123"
-}'
-echo -e "\n"
+-d "{
+  \"login\": \"$ADMIN_LOGIN\",
+  \"senha\": \"$ADMIN_SENHA\"
+}" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 
-echo "=============================="
-echo "2 - Testando login invalido"
-echo "=============================="
+if [ -z "$TOKEN_ADMIN" ]; then
+  echo "ERRO: nao conseguiu capturar o token do admin."
+  exit 1
+fi
 
-curl -s -X POST "$API/api/auth/login" \
+echo "Token admin capturado com sucesso."
+echo ""
+
+echo "------------------------------------------"
+echo "2. TESTE DE ROTA PROTEGIDA SEM TOKEN"
+echo "------------------------------------------"
+
+STATUS_SEM_TOKEN=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/alunas")
+
+echo "GET /api/alunas sem token -> HTTP $STATUS_SEM_TOKEN"
+echo "Esperado: 403"
+echo ""
+
+echo "------------------------------------------"
+echo "3. TESTE DE ROTA PROTEGIDA COM TOKEN ADMIN"
+echo "------------------------------------------"
+
+STATUS_COM_TOKEN=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/alunas" \
+-H "Authorization: Bearer $TOKEN_ADMIN")
+
+echo "GET /api/alunas com token admin -> HTTP $STATUS_COM_TOKEN"
+echo "Esperado: 200"
+echo ""
+
+echo "------------------------------------------"
+echo "4. LOGIN INVALIDO"
+echo "------------------------------------------"
+
+curl -s -X POST "$BASE_URL/api/auth/login" \
 -H "Content-Type: application/json" \
 -d '{
   "login": "admin",
   "senha": "senhaerrada"
-}'
-echo -e "\n"
+}' | python3 -m json.tool
 
-echo "=============================="
-echo "3 - Listando alunas inicialmente"
-echo "=============================="
+echo ""
+echo ""
 
-curl -s "$API/api/alunas"
-echo -e "\n"
+echo "------------------------------------------"
+echo "5. VALIDACAO DE ALUNA INVALIDA"
+echo "------------------------------------------"
 
-echo "=============================="
-echo "4 - Testando validacao de aluna com dados invalidos"
-echo "=============================="
-
-curl -s -X POST "$API/api/alunas" \
+curl -s -X POST "$BASE_URL/api/alunas" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d '{
   "nome": "",
-  "email": "emailerrado",
+  "email": "email-invalido",
   "telefone": "",
   "cpf": "",
   "dataNascimento": null,
   "senhaInicial": ""
-}'
-echo -e "\n"
+}' | python3 -m json.tool
 
-echo "=============================="
-echo "5 - Cadastrando aluna"
-echo "=============================="
+echo ""
+echo ""
 
-ALUNA_RESPONSE=$(curl -s -X POST "$API/api/alunas" \
+echo "------------------------------------------"
+echo "6. CADASTRAR ALUNA COM TOKEN ADMIN"
+echo "------------------------------------------"
+
+ALUNA_RESPONSE=$(curl -s -X POST "$BASE_URL/api/alunas" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d "{
-  \"nome\": \"Beatriz Lima\",
-  \"email\": \"$EMAIL_ALUNA\",
-  \"telefone\": \"45988887777\",
-  \"cpf\": \"$CPF_ALUNA\",
+  \"nome\": \"$ALUNA_NOME\",
+  \"email\": \"$ALUNA_EMAIL\",
+  \"telefone\": \"$ALUNA_TELEFONE\",
+  \"cpf\": \"$ALUNA_CPF\",
   \"dataNascimento\": \"1999-08-20\",
-  \"senhaInicial\": \"123456\"
+  \"senhaInicial\": \"$ALUNA_SENHA\"
 }")
 
-echo "$ALUNA_RESPONSE"
+echo "$ALUNA_RESPONSE" | python3 -m json.tool
 
-ALUNA_ID=$(echo "$ALUNA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+ALUNA_ID=$(echo "$ALUNA_RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('id',''))")
+
+if [ -z "$ALUNA_ID" ]; then
+  echo "ERRO: aluna nao foi cadastrada. Resposta nao possui ID."
+  exit 1
+fi
 
 echo ""
 echo "Aluna criada com ID: $ALUNA_ID"
-echo "Login da aluna: $CPF_ALUNA"
-echo "Senha da aluna: 123456"
+echo "CPF/login da aluna: $ALUNA_CPF"
 echo ""
 
-echo "=============================="
-echo "6 - Testando login da ALUNA"
-echo "=============================="
+echo "------------------------------------------"
+echo "7. LOGIN ALUNA"
+echo "------------------------------------------"
 
-curl -s -X POST "$API/api/auth/login" \
+TOKEN_ALUNA=$(curl -s -X POST "$BASE_URL/api/auth/login" \
 -H "Content-Type: application/json" \
 -d "{
-  \"login\": \"$CPF_ALUNA\",
-  \"senha\": \"123456\"
-}"
-echo -e "\n"
+  \"login\": \"$ALUNA_CPF\",
+  \"senha\": \"$ALUNA_SENHA\"
+}" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('token',''))")
 
-echo "=============================="
-echo "7 - Testando CPF duplicado"
-echo "=============================="
+if [ -z "$TOKEN_ALUNA" ]; then
+  echo "ERRO: nao conseguiu capturar o token da aluna."
+  exit 1
+fi
 
-curl -s -X POST "$API/api/alunas" \
+echo "Token aluna capturado com sucesso."
+echo ""
+
+echo "------------------------------------------"
+echo "8. TESTE DE PERMISSAO DA ALUNA"
+echo "------------------------------------------"
+
+STATUS_ALUNA_LISTAR_ALUNAS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/alunas" \
+-H "Authorization: Bearer $TOKEN_ALUNA")
+
+echo "ALUNA tentando GET /api/alunas -> HTTP $STATUS_ALUNA_LISTAR_ALUNAS"
+echo "Esperado: 403"
+echo ""
+
+STATUS_ALUNA_BUSCAR_PROPRIA=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/alunas/$ALUNA_ID" \
+-H "Authorization: Bearer $TOKEN_ALUNA")
+
+echo "ALUNA tentando GET /api/alunas/$ALUNA_ID -> HTTP $STATUS_ALUNA_BUSCAR_PROPRIA"
+echo "Esperado: 200"
+echo ""
+
+echo "------------------------------------------"
+echo "9. TESTE CPF DUPLICADO"
+echo "------------------------------------------"
+
+curl -s -X POST "$BASE_URL/api/alunas" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d "{
-  \"nome\": \"Outra Aluna\",
-  \"email\": \"outra$TIMESTAMP@email.com\",
-  \"telefone\": \"45999999999\",
-  \"cpf\": \"$CPF_ALUNA\",
-  \"dataNascimento\": \"2001-01-01\",
-  \"senhaInicial\": \"123456\"
-}"
-echo -e "\n"
+  \"nome\": \"$ALUNA_NOME\",
+  \"email\": \"duplicado${TIMESTAMP}@email.com\",
+  \"telefone\": \"$ALUNA_TELEFONE\",
+  \"cpf\": \"$ALUNA_CPF\",
+  \"dataNascimento\": \"1999-08-20\",
+  \"senhaInicial\": \"$ALUNA_SENHA\"
+}" | python3 -m json.tool
 
-echo "=============================="
-echo "8 - Inativando aluna"
-echo "=============================="
+echo ""
+echo ""
 
-curl -s -X PATCH "$API/api/alunas/$ALUNA_ID/inativar"
-echo -e "\n"
+echo "------------------------------------------"
+echo "10. VALIDACAO DE PROFESSORA INVALIDA"
+echo "------------------------------------------"
 
-echo "=============================="
-echo "9 - Ativando aluna"
-echo "=============================="
-
-curl -s -X PATCH "$API/api/alunas/$ALUNA_ID/ativar"
-echo -e "\n"
-
-echo "=============================="
-echo "10 - Testando validacao de professora com dados invalidos"
-echo "=============================="
-
-curl -s -X POST "$API/api/professoras" \
+curl -s -X POST "$BASE_URL/api/professoras" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d '{
   "nome": "",
-  "email": "emailerrado",
+  "email": "email-invalido",
   "cref": "",
   "especialidade": "",
   "senhaInicial": ""
-}'
-echo -e "\n"
+}' | python3 -m json.tool
 
-echo "=============================="
-echo "11 - Cadastrando professora"
-echo "=============================="
+echo ""
+echo ""
 
-PROFESSORA_RESPONSE=$(curl -s -X POST "$API/api/professoras" \
+echo "------------------------------------------"
+echo "11. CADASTRAR PROFESSORA COM TOKEN ADMIN"
+echo "------------------------------------------"
+
+PROF_RESPONSE=$(curl -s -X POST "$BASE_URL/api/professoras" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d "{
-  \"nome\": \"Carla Mendes\",
-  \"email\": \"$EMAIL_PROFESSORA\",
-  \"cref\": \"$CREF_PROFESSORA\",
-  \"especialidade\": \"Funcional\",
-  \"senhaInicial\": \"123456\"
+  \"nome\": \"$PROF_NOME\",
+  \"email\": \"$PROF_EMAIL\",
+  \"cref\": \"$PROF_CREF\",
+  \"especialidade\": \"$PROF_ESPECIALIDADE\",
+  \"senhaInicial\": \"$PROF_SENHA\"
 }")
 
-echo "$PROFESSORA_RESPONSE"
+echo "$PROF_RESPONSE" | python3 -m json.tool
 
-PROFESSORA_ID=$(echo "$PROFESSORA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PROF_ID=$(echo "$PROF_RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('id',''))")
+
+if [ -z "$PROF_ID" ]; then
+  echo "ERRO: professora nao foi cadastrada. Resposta nao possui ID."
+  exit 1
+fi
 
 echo ""
-echo "Professora criada com ID: $PROFESSORA_ID"
-echo "Login da professora: $CREF_PROFESSORA"
-echo "Senha da professora: 123456"
+echo "Professora criada com ID: $PROF_ID"
+echo "CREF/login da professora: $PROF_CREF"
 echo ""
 
-echo "=============================="
-echo "12 - Testando login da PROFESSORA"
-echo "=============================="
+echo "------------------------------------------"
+echo "12. LOGIN PROFESSORA"
+echo "------------------------------------------"
 
-curl -s -X POST "$API/api/auth/login" \
+TOKEN_PROF=$(curl -s -X POST "$BASE_URL/api/auth/login" \
 -H "Content-Type: application/json" \
 -d "{
-  \"login\": \"$CREF_PROFESSORA\",
-  \"senha\": \"123456\"
-}"
-echo -e "\n"
+  \"login\": \"$PROF_CREF\",
+  \"senha\": \"$PROF_SENHA\"
+}" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('token',''))")
 
-echo "=============================="
-echo "13 - Testando CREF duplicado"
-echo "=============================="
+if [ -z "$TOKEN_PROF" ]; then
+  echo "ERRO: nao conseguiu capturar o token da professora."
+  exit 1
+fi
 
-curl -s -X POST "$API/api/professoras" \
+echo "Token professora capturado com sucesso."
+echo ""
+
+echo "------------------------------------------"
+echo "13. TESTE DE PERMISSAO DA PROFESSORA"
+echo "------------------------------------------"
+
+STATUS_PROF_LISTAR_ALUNAS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/alunas" \
+-H "Authorization: Bearer $TOKEN_PROF")
+
+echo "PROFESSORA tentando GET /api/alunas -> HTTP $STATUS_PROF_LISTAR_ALUNAS"
+echo "Esperado: 200"
+echo ""
+
+STATUS_PROF_CADASTRAR_ALUNA=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/alunas" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_PROF" \
 -d "{
-  \"nome\": \"Outra Professora\",
-  \"email\": \"outraprof$TIMESTAMP@email.com\",
-  \"cref\": \"$CREF_PROFESSORA\",
-  \"especialidade\": \"Musculacao\",
-  \"senhaInicial\": \"123456\"
-}"
-echo -e "\n"
+  \"nome\": \"Teste Bloqueado\",
+  \"email\": \"bloqueado${TIMESTAMP}@email.com\",
+  \"telefone\": \"45999999999\",
+  \"cpf\": \"$ALUNA_CPF\",
+  \"dataNascimento\": \"2000-01-01\",
+  \"senhaInicial\": \"teste123\"
+}")
 
-echo "=============================="
-echo "14 - Inativando professora"
-echo "=============================="
+echo "PROFESSORA tentando POST /api/alunas -> HTTP $STATUS_PROF_CADASTRAR_ALUNA"
+echo "Esperado: 403"
+echo ""
 
-curl -s -X PATCH "$API/api/professoras/$PROFESSORA_ID/inativar"
-echo -e "\n"
+echo "------------------------------------------"
+echo "14. TESTE CREF DUPLICADO"
+echo "------------------------------------------"
 
-echo "=============================="
-echo "15 - Ativando professora"
-echo "=============================="
-
-curl -s -X PATCH "$API/api/professoras/$PROFESSORA_ID/ativar"
-echo -e "\n"
-
-echo "=============================="
-echo "16 - Cadastrando treino"
-echo "=============================="
-
-TREINO_RESPONSE=$(curl -s -X POST "$API/api/treinos" \
+curl -s -X POST "$BASE_URL/api/professoras" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d "{
-  \"nome\": \"Treino Completo\",
-  \"descricao\": \"Treino geral para iniciantes\",
+  \"nome\": \"$PROF_NOME\",
+  \"email\": \"profduplicada${TIMESTAMP}@email.com\",
+  \"cref\": \"$PROF_CREF\",
+  \"especialidade\": \"$PROF_ESPECIALIDADE\",
+  \"senhaInicial\": \"$PROF_SENHA\"
+}" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "15. CADASTRAR TREINO COM PROFESSORA"
+echo "------------------------------------------"
+
+TREINO_RESPONSE=$(curl -s -X POST "$BASE_URL/api/treinos" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
+-d "{
+  \"nome\": \"Treino Inicial $TIMESTAMP\",
+  \"descricao\": \"Treino de adaptacao para nova aluna\",
   \"nivel\": \"INICIANTE\",
   \"professora\": {
-    \"id\": $PROFESSORA_ID
+    \"id\": $PROF_ID
   }
 }")
 
-echo "$TREINO_RESPONSE"
+echo "$TREINO_RESPONSE" | python3 -m json.tool
 
-TREINO_ID=$(echo "$TREINO_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+TREINO_ID=$(echo "$TREINO_RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('id',''))")
+
+if [ -z "$TREINO_ID" ]; then
+  echo "ERRO: treino nao foi cadastrado. Resposta nao possui ID."
+  exit 1
+fi
 
 echo ""
 echo "Treino criado com ID: $TREINO_ID"
 echo ""
 
-echo "=============================="
-echo "17 - Listando treinos da professora"
-echo "=============================="
+echo "------------------------------------------"
+echo "16. LISTAR TREINOS COMO ALUNA"
+echo "------------------------------------------"
 
-curl -s "$API/api/treinos/professora/$PROFESSORA_ID"
-echo -e "\n"
+STATUS_ALUNA_TREINOS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/treinos" \
+-H "Authorization: Bearer $TOKEN_ALUNA")
 
-echo "=============================="
-echo "18 - Inativando treino"
-echo "=============================="
+echo "ALUNA tentando GET /api/treinos -> HTTP $STATUS_ALUNA_TREINOS"
+echo "Esperado: 200"
+echo ""
 
-curl -s -X PATCH "$API/api/treinos/$TREINO_ID/inativar"
-echo -e "\n"
+echo "------------------------------------------"
+echo "17. CADASTRAR MATRICULA ATIVA"
+echo "------------------------------------------"
 
-echo "=============================="
-echo "19 - Ativando treino"
-echo "=============================="
+DATA_INICIO=$(date +%F)
+DATA_VENCIMENTO=$(date -d "+30 days" +%F)
 
-curl -s -X PATCH "$API/api/treinos/$TREINO_ID/ativar"
-echo -e "\n"
-
-echo "=============================="
-echo "20 - Cadastrando matricula ativa/a vencer"
-echo "=============================="
-
-MATRICULA_RESPONSE=$(curl -s -X POST "$API/api/matriculas" \
+MATRICULA_RESPONSE=$(curl -s -X POST "$BASE_URL/api/matriculas" \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN_ADMIN" \
 -d "{
   \"aluna\": {
     \"id\": $ALUNA_ID
@@ -273,119 +376,192 @@ MATRICULA_RESPONSE=$(curl -s -X POST "$API/api/matriculas" \
   \"treino\": {
     \"id\": $TREINO_ID
   },
-  \"dataInicio\": \"$HOJE\",
-  \"dataVencimento\": \"$VENCE_EM_5_DIAS\"
+  \"dataInicio\": \"$DATA_INICIO\",
+  \"dataVencimento\": \"$DATA_VENCIMENTO\"
 }")
 
-echo "$MATRICULA_RESPONSE"
+echo "$MATRICULA_RESPONSE" | python3 -m json.tool
 
-MATRICULA_ID=$(echo "$MATRICULA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+MATRICULA_ID=$(echo "$MATRICULA_RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('id',''))")
+
+if [ -z "$MATRICULA_ID" ]; then
+  echo "ERRO: matricula nao foi cadastrada. Resposta nao possui ID."
+  exit 1
+fi
 
 echo ""
-echo "Matricula ativa criada com ID: $MATRICULA_ID"
+echo "Matricula criada com ID: $MATRICULA_ID"
 echo ""
 
-echo "=============================="
-echo "21 - Listando matriculas da aluna"
-echo "=============================="
+echo "------------------------------------------"
+echo "18. ALUNA CONSULTANDO SUAS MATRICULAS"
+echo "------------------------------------------"
 
-curl -s "$API/api/matriculas/aluna/$ALUNA_ID"
-echo -e "\n"
+curl -s "$BASE_URL/api/matriculas/aluna/$ALUNA_ID" \
+-H "Authorization: Bearer $TOKEN_ALUNA" | python3 -m json.tool
 
-echo "=============================="
-echo "22 - Listando matriculas da professora"
-echo "=============================="
+echo ""
+echo ""
 
-curl -s "$API/api/matriculas/professora/$PROFESSORA_ID"
-echo -e "\n"
+echo "------------------------------------------"
+echo "19. REGISTRAR CHECK-IN DA ALUNA"
+echo "------------------------------------------"
 
-echo "=============================="
-echo "23 - Listando matriculas a vencer"
-echo "=============================="
+CHECKIN_RESPONSE=$(curl -s -X POST "$BASE_URL/api/frequencias/checkin/$ALUNA_ID" \
+-H "Authorization: Bearer $TOKEN_ALUNA")
 
-curl -s "$API/api/matriculas/a-vencer"
-echo -e "\n"
+echo "$CHECKIN_RESPONSE" | python3 -m json.tool
 
-echo "=============================="
-echo "24 - Registrando check-in com matricula ativa"
-echo "=============================="
+FREQUENCIA_ID=$(echo "$CHECKIN_RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('id',''))")
 
-FREQUENCIA_RESPONSE=$(curl -s -X POST "$API/api/frequencias/checkin/$ALUNA_ID")
-
-echo "$FREQUENCIA_RESPONSE"
-
-FREQUENCIA_ID=$(echo "$FREQUENCIA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+if [ -z "$FREQUENCIA_ID" ]; then
+  echo "ERRO: frequencia nao foi cadastrada. Resposta nao possui ID."
+  exit 1
+fi
 
 echo ""
 echo "Frequencia criada com ID: $FREQUENCIA_ID"
 echo ""
 
-echo "=============================="
-echo "25 - Listando frequencias da aluna"
-echo "=============================="
+echo "------------------------------------------"
+echo "20. LISTAR FREQUENCIAS DA ALUNA"
+echo "------------------------------------------"
 
-curl -s "$API/api/frequencias/aluna/$ALUNA_ID"
-echo -e "\n"
-
-echo "=============================="
-echo "26 - Cadastrando matricula vencida"
-echo "=============================="
-
-MATRICULA_VENCIDA_RESPONSE=$(curl -s -X POST "$API/api/matriculas" \
--H "Content-Type: application/json" \
--d "{
-  \"aluna\": {
-    \"id\": $ALUNA_ID
-  },
-  \"treino\": {
-    \"id\": $TREINO_ID
-  },
-  \"dataInicio\": \"$INICIO_VENCIDA\",
-  \"dataVencimento\": \"$VENCIDA\"
-}")
-
-echo "$MATRICULA_VENCIDA_RESPONSE"
-echo -e "\n"
-
-echo "=============================="
-echo "27 - Listando matriculas vencidas"
-echo "=============================="
-
-curl -s "$API/api/matriculas/vencidas"
-echo -e "\n"
-
-echo "=============================="
-echo "28 - Cancelando matricula ativa"
-echo "=============================="
-
-curl -s -X PATCH "$API/api/matriculas/$MATRICULA_ID/cancelar"
-echo -e "\n"
-
-echo "=============================="
-echo "29 - Listando todos os cadastros"
-echo "=============================="
+curl -s "$BASE_URL/api/frequencias/aluna/$ALUNA_ID" \
+-H "Authorization: Bearer $TOKEN_ALUNA" | python3 -m json.tool
 
 echo ""
-echo "Alunas:"
-curl -s "$API/api/alunas"
-echo -e "\n"
+echo ""
 
-echo "Professoras:"
-curl -s "$API/api/professoras"
-echo -e "\n"
+echo "------------------------------------------"
+echo "21. LISTAR MATRICULAS A VENCER COMO ADMIN"
+echo "------------------------------------------"
 
-echo "Treinos:"
-curl -s "$API/api/treinos"
-echo -e "\n"
+curl -s "$BASE_URL/api/matriculas/a-vencer" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
 
-echo "Matriculas:"
-curl -s "$API/api/matriculas"
-echo -e "\n"
+echo ""
+echo ""
 
-echo "Frequencias:"
-curl -s "$API/api/frequencias"
-echo -e "\n"
+echo "------------------------------------------"
+echo "22. CANCELAR MATRICULA COMO ADMIN"
+echo "------------------------------------------"
 
-echo "=============================="
-echo "TESTE COMPLETO FINALIZADO"
-echo "=============================="
+curl -s -X PATCH "$BASE_URL/api/matriculas/$MATRICULA_ID/cancelar" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "23. TESTE ALUNA TENTANDO CANCELAR MATRICULA"
+echo "------------------------------------------"
+
+STATUS_ALUNA_CANCELAR=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/api/matriculas/$MATRICULA_ID/cancelar" \
+-H "Authorization: Bearer $TOKEN_ALUNA")
+
+echo "ALUNA tentando PATCH /api/matriculas/$MATRICULA_ID/cancelar -> HTTP $STATUS_ALUNA_CANCELAR"
+echo "Esperado: 403"
+echo ""
+
+echo "------------------------------------------"
+echo "24. INATIVAR ALUNA COMO ADMIN"
+echo "------------------------------------------"
+
+curl -s -X PATCH "$BASE_URL/api/alunas/$ALUNA_ID/inativar" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "25. TENTAR LOGIN COM ALUNA INATIVA"
+echo "------------------------------------------"
+
+curl -s -X POST "$BASE_URL/api/auth/login" \
+-H "Content-Type: application/json" \
+-d "{
+  \"login\": \"$ALUNA_CPF\",
+  \"senha\": \"$ALUNA_SENHA\"
+}" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "26. REATIVAR ALUNA COMO ADMIN"
+echo "------------------------------------------"
+
+curl -s -X PATCH "$BASE_URL/api/alunas/$ALUNA_ID/ativar" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "27. INATIVAR PROFESSORA COMO ADMIN"
+echo "------------------------------------------"
+
+curl -s -X PATCH "$BASE_URL/api/professoras/$PROF_ID/inativar" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "28. TENTAR LOGIN COM PROFESSORA INATIVA"
+echo "------------------------------------------"
+
+curl -s -X POST "$BASE_URL/api/auth/login" \
+-H "Content-Type: application/json" \
+-d "{
+  \"login\": \"$PROF_CREF\",
+  \"senha\": \"$PROF_SENHA\"
+}" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "29. REATIVAR PROFESSORA COMO ADMIN"
+echo "------------------------------------------"
+
+curl -s -X PATCH "$BASE_URL/api/professoras/$PROF_ID/ativar" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo ""
+
+echo "------------------------------------------"
+echo "30. LISTAGENS FINAIS COMO ADMIN"
+echo "------------------------------------------"
+
+echo ""
+echo "ALUNAS:"
+curl -s "$BASE_URL/api/alunas" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo "PROFESSORAS:"
+curl -s "$BASE_URL/api/professoras" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo "TREINOS:"
+curl -s "$BASE_URL/api/treinos" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo "MATRICULAS:"
+curl -s "$BASE_URL/api/matriculas" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo "FREQUENCIAS:"
+curl -s "$BASE_URL/api/frequencias" \
+-H "Authorization: Bearer $TOKEN_ADMIN" | python3 -m json.tool
+
+echo ""
+echo "=========================================="
+echo " TESTE COMPLETO FINALIZADO"
+echo "=========================================="

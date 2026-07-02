@@ -3,6 +3,7 @@ package br.edu.ifpr.academia.exceptions;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -40,6 +41,28 @@ public class GlobalExceptionHandler {
         });
 
         return ResponseEntity.badRequest().body(erros);
+    }
+
+    /*
+     * Trata erros de permissao do Spring Security.
+     *
+     * Exemplo:
+     * - ALUNA tentando listar todas as alunas
+     * - PROFESSORA tentando cadastrar aluna
+     * - ALUNA tentando cancelar matricula
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> tratarAcessoNegado(
+            AccessDeniedException exception
+    ) {
+        Map<String, Object> erro = new HashMap<>();
+
+        erro.put("status", HttpStatus.FORBIDDEN.value());
+        erro.put("erro", "Acesso negado");
+        erro.put("mensagem", "Voce nao tem permissao para acessar este recurso");
+        erro.put("dataHora", LocalDateTime.now());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(erro);
     }
 
     /*
