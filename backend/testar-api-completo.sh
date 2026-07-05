@@ -75,7 +75,7 @@ echo "------------------------------------------"
 STATUS_SEM_TOKEN=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/alunas")
 
 echo "GET /api/alunas sem token -> HTTP $STATUS_SEM_TOKEN"
-echo "Esperado: 403"
+echo "Esperado: 401"
 echo ""
 
 echo "------------------------------------------"

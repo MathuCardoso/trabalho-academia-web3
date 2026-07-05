@@ -1,6 +1,7 @@
 # Modelagem inicial - Sistema de Academia
 
 Entidades principais:
+- Usuario
 - Aluna
 - Professora
 - Treino
@@ -14,6 +15,8 @@ Relacionamentos:
 - Uma matrícula pertence a uma aluna.
 - Uma matrícula pode estar vinculada a um treino.
 - Uma aluna pode ter vários registros de frequência.
+- Uma aluna possui um usuário de acesso.
+- Uma professora possui um usuário de acesso.
 
 ## Atributos das entidades
 
@@ -25,12 +28,22 @@ Relacionamentos:
 - cpf
 - dataNascimento
 - status
+- usuarioId
 
 ### Professora
 - id
 - nome
 - email
+- cref
 - especialidade
+- status
+- usuarioId
+
+### Usuario
+- id
+- login
+- senha
+- perfil
 - status
 
 ### Treino
@@ -55,6 +68,12 @@ Relacionamentos:
 - dataHoraEntrada
 
 ## Relacionamentos
+
+### Aluna, Professora e Usuário
+- Uma aluna referencia um único usuário de acesso.
+- Uma professora referencia um único usuário de acesso.
+- Usuário não armazena referências para aluna ou professora.
+- Relações: 1:1
 
 ### Professora e Treino
 - Uma professora pode ter vários treinos.

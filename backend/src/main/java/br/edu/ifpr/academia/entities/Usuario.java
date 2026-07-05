@@ -2,6 +2,7 @@ package br.edu.ifpr.academia.entities;
 
 import br.edu.ifpr.academia.enums.PerfilUsuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,6 +45,7 @@ public class Usuario {
      */
     @NotBlank(message = "A senha e obrigatoria")
     @Column(nullable = false)
+    @JsonIgnore
     private String senha;
 
     /*
@@ -63,22 +65,8 @@ public class Usuario {
     private StatusCadastro status = StatusCadastro.ATIVO;
 
     /*
-     * Vinculo opcional com Aluna.
+     * O vinculo com Aluna ou Professora fica nas entidades de cadastro.
      *
-     * Preenchido apenas quando perfil = ALUNA.
-     * Usuario ADMIN e PROFESSORA deixam isso null.
+     * Assim, Usuario permanece focado apenas no acesso ao sistema.
      */
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "aluna_id", unique = true)
-    private Aluna aluna;
-
-    /*
-     * Vinculo opcional com Professora.
-     *
-     * Preenchido apenas quando perfil = PROFESSORA.
-     * Usuario ADMIN e ALUNA deixam isso null.
-     */
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "professora_id", unique = true)
-    private Professora professora;
 }

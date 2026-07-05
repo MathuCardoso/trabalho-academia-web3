@@ -3,6 +3,7 @@ package br.edu.ifpr.academia.controllers;
 import br.edu.ifpr.academia.entities.Treino;
 import br.edu.ifpr.academia.services.TreinoService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -40,13 +41,18 @@ public class TreinoController {
         return treinoService.listarPorProfessora(professoraId);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@treinoService.professoraInformadaPertenceAoUsuario(#treino, authentication.name))")
     @PostMapping
     public ResponseEntity<Treino> cadastrar(@Valid @RequestBody Treino treino) {
-        return ResponseEntity.ok(treinoService.salvar(treino));
+        return ResponseEntity.status(HttpStatus.CREATED).body(treinoService.salvar(treino));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@treinoService.pertenceAProfessoraDoUsuario(#id, authentication.name) and "
+            + "@treinoService.professoraInformadaPertenceAoUsuario(#treino, authentication.name))")
     @PutMapping("/{id}")
     public ResponseEntity<Treino> atualizar(
             @PathVariable Long id,
@@ -62,13 +68,17 @@ public class TreinoController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@treinoService.pertenceAProfessoraDoUsuario(#id, authentication.name))")
     @PatchMapping("/{id}/ativar")
     public ResponseEntity<Treino> ativar(@PathVariable Long id) {
         return ResponseEntity.ok(treinoService.ativar(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@treinoService.pertenceAProfessoraDoUsuario(#id, authentication.name))")
     @PatchMapping("/{id}/inativar")
     public ResponseEntity<Treino> inativar(@PathVariable Long id) {
         return ResponseEntity.ok(treinoService.inativar(id));

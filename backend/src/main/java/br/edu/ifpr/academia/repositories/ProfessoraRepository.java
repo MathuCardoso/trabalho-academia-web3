@@ -28,6 +28,11 @@ public interface ProfessoraRepository extends JpaRepository<Professora, Long> {
     Optional<Professora> findByCref(String cref);
 
     /*
+     * Busca professora pelo Usuario vinculado.
+     */
+    Optional<Professora> findByUsuario_Id(Long usuarioId);
+
+    /*
      * Verifica se ja existe uma professora com esse CREF.
      *
      * Usado para impedir cadastro duplicado.
@@ -35,9 +40,19 @@ public interface ProfessoraRepository extends JpaRepository<Professora, Long> {
     boolean existsByCref(String cref);
 
     /*
+     * Verifica CREF duplicado ignorando a propria professora.
+     */
+    boolean existsByCrefAndIdNot(String cref, Long id);
+
+    /*
      * Verifica se ja existe uma professora com esse e-mail.
      *
      * Usado para impedir cadastro duplicado.
      */
     boolean existsByEmail(String email);
+
+    /*
+     * Verifica e-mail duplicado ignorando a propria professora.
+     */
+    boolean existsByEmailAndIdNot(String email, Long id);
 }

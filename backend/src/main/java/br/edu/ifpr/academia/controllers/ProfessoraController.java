@@ -4,6 +4,7 @@ import br.edu.ifpr.academia.dtos.ProfessoraRequest;
 import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.services.ProfessoraService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class ProfessoraController {
         this.professoraService = professoraService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'ALUNA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
     @GetMapping
     public List<Professora> listarTodas() {
         return professoraService.listarTodas();
@@ -38,7 +39,7 @@ public class ProfessoraController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Professora> cadastrar(@Valid @RequestBody ProfessoraRequest request) {
-        return ResponseEntity.ok(professoraService.cadastrarComUsuario(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(professoraService.cadastrarComUsuario(request));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

@@ -3,6 +3,7 @@ package br.edu.ifpr.academia.controllers;
 import br.edu.ifpr.academia.entities.Matricula;
 import br.edu.ifpr.academia.services.MatriculaService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,13 +29,15 @@ public class MatriculaController {
         return matriculaService.listarTodas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+            + "(hasRole('ALUNA') and @matriculaService.pertenceAAlunaDoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Matricula> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(matriculaService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+            + "(hasRole('ALUNA') and @alunaService.pertenceAoUsuario(#alunaId, authentication.name))")
     @GetMapping("/aluna/{alunaId}")
     public List<Matricula> listarPorAluna(@PathVariable Long alunaId) {
         return matriculaService.listarPorAluna(alunaId);
@@ -61,7 +64,7 @@ public class MatriculaController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Matricula> cadastrar(@Valid @RequestBody Matricula matricula) {
-        return ResponseEntity.ok(matriculaService.salvar(matricula));
+        return ResponseEntity.status(HttpStatus.CREATED).body(matriculaService.salvar(matricula));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

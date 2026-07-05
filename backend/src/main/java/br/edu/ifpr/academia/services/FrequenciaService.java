@@ -2,7 +2,9 @@ package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.entities.Frequencia;
+import br.edu.ifpr.academia.exceptions.ApiException;
 import br.edu.ifpr.academia.repositories.FrequenciaRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,7 +42,15 @@ public class FrequenciaService {
      */
     public Frequencia buscarPorId(Long id) {
         return frequenciaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Frequencia nao encontrada"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Frequencia nao encontrada"));
+    }
+
+    public boolean pertenceAAlunaDoUsuario(Long frequenciaId, String login) {
+        return frequenciaRepository.findById(frequenciaId)
+                .map(Frequencia::getAluna)
+                .map(Aluna::getId)
+                .filter(alunaId -> alunaService.pertenceAoUsuario(alunaId, login))
+                .isPresent();
     }
 
     /*
@@ -56,10 +66,7 @@ public class FrequenciaService {
      * Se dataHoraEntrada vier nula, registra o horario atual.
      */
     public Frequencia salvar(Frequencia frequencia) {
-        if (frequencia.getAluna() != null && frequencia.getAluna().getId() != null) {
-            Aluna aluna = alunaService.buscarPorId(frequencia.getAluna().getId());
-            frequencia.setAluna(aluna);
-        }
+        frequencia.setAluna(buscarAlunaObrigatoria(frequencia));
 
         if (frequencia.getDataHoraEntrada() == null) {
             frequencia.setDataHoraEntrada(LocalDateTime.now());
@@ -82,7 +89,7 @@ public class FrequenciaService {
         boolean possuiMatriculaAtiva = matriculaService.alunaPossuiMatriculaAtiva(alunaId);
 
         if (!possuiMatriculaAtiva) {
-            throw new RuntimeException("Aluna nao possui matricula ativa");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Aluna nao possui matricula ativa", "aluna");
         }
 
         Frequencia frequencia = new Frequencia();
@@ -98,10 +105,7 @@ public class FrequenciaService {
     public Frequencia atualizar(Long id, Frequencia dadosAtualizados) {
         Frequencia frequencia = buscarPorId(id);
 
-        if (dadosAtualizados.getAluna() != null && dadosAtualizados.getAluna().getId() != null) {
-            Aluna aluna = alunaService.buscarPorId(dadosAtualizados.getAluna().getId());
-            frequencia.setAluna(aluna);
-        }
+        frequencia.setAluna(buscarAlunaObrigatoria(dadosAtualizados));
 
         frequencia.setDataHoraEntrada(dadosAtualizados.getDataHoraEntrada());
 
@@ -112,6 +116,15 @@ public class FrequenciaService {
      * Exclui frequencia.
      */
     public void excluir(Long id) {
-        frequenciaRepository.deleteById(id);
+        Frequencia frequencia = buscarPorId(id);
+        frequenciaRepository.delete(frequencia);
+    }
+
+    private Aluna buscarAlunaObrigatoria(Frequencia frequencia) {
+        if (frequencia.getAluna() == null || frequencia.getAluna().getId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A aluna e obrigatoria", "aluna");
+        }
+
+        return alunaService.buscarPorId(frequencia.getAluna().getId());
     }
 }

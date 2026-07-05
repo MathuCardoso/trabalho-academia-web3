@@ -1,9 +1,12 @@
 package br.edu.ifpr.academia.entities;
 
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /*
@@ -41,6 +44,24 @@ public class Professora {
     @NotBlank(message = "A especialidade e obrigatoria")
     private String especialidade;
 
+    @NotNull(message = "O status e obrigatorio")
     @Enumerated(EnumType.STRING)
     private StatusCadastro status = StatusCadastro.ATIVO;
+
+    /*
+     * Usuario de acesso da professora.
+     *
+     * O campo completo nao e serializado para evitar expor senha.
+     * No JSON, a API devolve apenas usuarioId.
+     */
+    @JsonIgnore
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "usuario_id", unique = true)
+    private Usuario usuario;
+
+    @Transient
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Long getUsuarioId() {
+        return usuario != null ? usuario.getId() : null;
+    }
 }

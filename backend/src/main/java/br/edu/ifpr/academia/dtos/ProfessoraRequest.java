@@ -1,7 +1,9 @@
 package br.edu.ifpr.academia.dtos;
 
+import br.edu.ifpr.academia.enums.StatusCadastro;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /*
  * DTO usado para cadastrar uma professora.
@@ -26,6 +28,9 @@ public class ProfessoraRequest {
 
     @NotBlank(message = "A senha inicial e obrigatoria")
     private String senhaInicial;
+
+    @NotNull(message = "O status e obrigatorio")
+    private StatusCadastro status = StatusCadastro.ATIVO;
 
     public String getNome() {
         return nome;
@@ -69,5 +74,13 @@ public class ProfessoraRequest {
 
     public void setSenhaInicial(String senhaInicial) {
         this.senhaInicial = senhaInicial;
+    }
+
+    public StatusCadastro getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusCadastro status) {
+        this.status = status;
     }
 }

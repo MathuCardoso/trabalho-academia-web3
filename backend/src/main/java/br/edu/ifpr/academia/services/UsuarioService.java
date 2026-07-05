@@ -5,7 +5,11 @@ import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.PerfilUsuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import br.edu.ifpr.academia.exceptions.ApiException;
+import br.edu.ifpr.academia.repositories.AlunaRepository;
+import br.edu.ifpr.academia.repositories.ProfessoraRepository;
 import br.edu.ifpr.academia.repositories.UsuarioRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +23,6 @@ import java.util.List;
  * - senha criptografada
  * - perfil
  * - status de acesso
- * - vinculo opcional com Aluna ou Professora
  *
  */
 @Service
@@ -27,12 +30,19 @@ public class UsuarioService {
 
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
+    private final AlunaRepository alunaRepository;
+    private final ProfessoraRepository professoraRepository;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            AlunaRepository alunaRepository,
+            ProfessoraRepository professoraRepository
+    ) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.alunaRepository = alunaRepository;
+        this.professoraRepository = professoraRepository;
     }
 
     /*
@@ -47,7 +57,7 @@ public class UsuarioService {
      */
     public Usuario buscarPorId(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario nao encontrado"));
     }
 
     /*
@@ -57,7 +67,23 @@ public class UsuarioService {
      */
     public Usuario buscarPorLogin(String login) {
         return usuarioRepository.findByLogin(login)
-                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario nao encontrado"));
+    }
+
+    /*
+     * Busca a Aluna dona de um Usuario.
+     */
+    public Aluna buscarAlunaPorUsuario(Long usuarioId) {
+        return alunaRepository.findByUsuario_Id(usuarioId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Aluna do usuario nao encontrada"));
+    }
+
+    /*
+     * Busca a Professora dona de um Usuario.
+     */
+    public Professora buscarProfessoraPorUsuario(Long usuarioId) {
+        return professoraRepository.findByUsuario_Id(usuarioId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Professora do usuario nao encontrada"));
     }
 
     /*
@@ -67,7 +93,7 @@ public class UsuarioService {
      */
     public Usuario criarAdmin(String login, String senha) {
         if (usuarioRepository.existsByLogin(login)) {
-            throw new RuntimeException("Login ja cadastrado");
+            throw new ApiException(HttpStatus.CONFLICT, "Login ja cadastrado", "login");
         }
 
         Usuario usuario = new Usuario();
@@ -92,15 +118,14 @@ public class UsuarioService {
         String login = aluna.getCpf();
 
         if (usuarioRepository.existsByLogin(login)) {
-            throw new RuntimeException("Ja existe usuario cadastrado com este CPF");
+            throw new ApiException(HttpStatus.CONFLICT, "Ja existe usuario cadastrado com este CPF", "cpf");
         }
 
         Usuario usuario = new Usuario();
         usuario.setLogin(login);
         usuario.setSenha(passwordEncoder.encode(senhaInicial));
         usuario.setPerfil(PerfilUsuario.ALUNA);
-        usuario.setStatus(StatusCadastro.ATIVO);
-        usuario.setAluna(aluna);
+        usuario.setStatus(statusOuAtivo(aluna.getStatus()));
 
         return usuarioRepository.save(usuario);
     }
@@ -118,16 +143,31 @@ public class UsuarioService {
         String login = professora.getCref();
 
         if (usuarioRepository.existsByLogin(login)) {
-            throw new RuntimeException("Ja existe usuario cadastrado com este CREF");
+            throw new ApiException(HttpStatus.CONFLICT, "Ja existe usuario cadastrado com este CREF", "cref");
         }
 
         Usuario usuario = new Usuario();
         usuario.setLogin(login);
         usuario.setSenha(passwordEncoder.encode(senhaInicial));
         usuario.setPerfil(PerfilUsuario.PROFESSORA);
-        usuario.setStatus(StatusCadastro.ATIVO);
-        usuario.setProfessora(professora);
+        usuario.setStatus(statusOuAtivo(professora.getStatus()));
 
+        return usuarioRepository.save(usuario);
+    }
+
+    /*
+     * Atualiza o login do Usuario quando CPF/CREF do cadastro muda.
+     */
+    public Usuario atualizarLogin(Usuario usuario, String novoLogin) {
+        if (usuario == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario vinculado nao encontrado");
+        }
+
+        if (usuarioRepository.existsByLoginAndIdNot(novoLogin, usuario.getId())) {
+            throw new ApiException(HttpStatus.CONFLICT, "Login ja cadastrado", "login");
+        }
+
+        usuario.setLogin(novoLogin);
         return usuarioRepository.save(usuario);
     }
 
@@ -161,8 +201,14 @@ public class UsuarioService {
      * - Usuario.status = ATIVO
      */
     public Usuario ativarUsuarioDaAluna(Long alunaId) {
-        Usuario usuario = usuarioRepository.findByAlunaId(alunaId)
-                .orElseThrow(() -> new RuntimeException("Usuario da aluna nao encontrado"));
+        Aluna aluna = alunaRepository.findById(alunaId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Aluna nao encontrada"));
+
+        Usuario usuario = aluna.getUsuario();
+
+        if (usuario == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da aluna nao encontrado");
+        }
 
         usuario.setStatus(StatusCadastro.ATIVO);
         return usuarioRepository.save(usuario);
@@ -180,8 +226,14 @@ public class UsuarioService {
      * Dessa forma, a aluna tambem deixa de conseguir fazer login.
      */
     public Usuario inativarUsuarioDaAluna(Long alunaId) {
-        Usuario usuario = usuarioRepository.findByAlunaId(alunaId)
-                .orElseThrow(() -> new RuntimeException("Usuario da aluna nao encontrado"));
+        Aluna aluna = alunaRepository.findById(alunaId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Aluna nao encontrada"));
+
+        Usuario usuario = aluna.getUsuario();
+
+        if (usuario == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da aluna nao encontrado");
+        }
 
         usuario.setStatus(StatusCadastro.INATIVO);
         return usuarioRepository.save(usuario);
@@ -197,8 +249,14 @@ public class UsuarioService {
      * - Usuario.status = ATIVO
      */
     public Usuario ativarUsuarioDaProfessora(Long professoraId) {
-        Usuario usuario = usuarioRepository.findByProfessoraId(professoraId)
-                .orElseThrow(() -> new RuntimeException("Usuario da professora nao encontrado"));
+        Professora professora = professoraRepository.findById(professoraId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Professora nao encontrada"));
+
+        Usuario usuario = professora.getUsuario();
+
+        if (usuario == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da professora nao encontrado");
+        }
 
         usuario.setStatus(StatusCadastro.ATIVO);
         return usuarioRepository.save(usuario);
@@ -216,8 +274,14 @@ public class UsuarioService {
      * Dessa forma, a professora tambem deixa de conseguir fazer login.
      */
     public Usuario inativarUsuarioDaProfessora(Long professoraId) {
-        Usuario usuario = usuarioRepository.findByProfessoraId(professoraId)
-                .orElseThrow(() -> new RuntimeException("Usuario da professora nao encontrado"));
+        Professora professora = professoraRepository.findById(professoraId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Professora nao encontrada"));
+
+        Usuario usuario = professora.getUsuario();
+
+        if (usuario == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da professora nao encontrado");
+        }
 
         usuario.setStatus(StatusCadastro.INATIVO);
         return usuarioRepository.save(usuario);
@@ -227,6 +291,11 @@ public class UsuarioService {
      * Exclui usuario.
      */
     public void excluir(Long id) {
-        usuarioRepository.deleteById(id);
+        Usuario usuario = buscarPorId(id);
+        usuarioRepository.delete(usuario);
+    }
+
+    private StatusCadastro statusOuAtivo(StatusCadastro status) {
+        return status == null ? StatusCadastro.ATIVO : status;
     }
 }

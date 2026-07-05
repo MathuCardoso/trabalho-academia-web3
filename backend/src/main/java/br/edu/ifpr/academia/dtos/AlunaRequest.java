@@ -14,26 +14,29 @@ import java.time.LocalDate;
 
 public class AlunaRequest {
 
-    @NotBlank(message = "O nome é obrigatorio")
+    @NotBlank(message = "O nome e obrigatorio")
     private String nome;
 
-    @NotBlank(message = "O e-mail é obrigatorio")
+    @NotBlank(message = "O e-mail e obrigatorio")
     @Email(message = "Informe um e-mail valido")
     private String email;
 
-    @NotBlank(message = "O telefone é obrigatorio")
+    @NotBlank(message = "O telefone e obrigatorio")
     private String telefone;
 
-    @NotBlank(message = "O CPF é obrigatorio")
+    @NotBlank(message = "O CPF e obrigatorio")
     @Size(min = 14, max = 14, message = "O CPF deve conter 14 caracteres.")
     @CPF(message = "CPF invalido")
     private String cpf;
 
-    @NotNull(message = "A data de nascimento é obrigatoria")
-    @JsonFormat(pattern = "dd/MM/yyyy")
+    @NotNull(message = "A data de nascimento e obrigatoria")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dataNascimento;
 
-    @NotNull(message = "O status é obrigatoria")
+    @NotBlank(message = "A senha inicial e obrigatoria")
+    private String senhaInicial;
+
+    @NotNull(message = "O status e obrigatorio")
     private StatusCadastro status = StatusCadastro.ATIVO;
 
     public String getNome() {
@@ -74,5 +77,21 @@ public class AlunaRequest {
 
     public void setDataNascimento(LocalDate dataNascimento) {
         this.dataNascimento = dataNascimento;
+    }
+
+    public String getSenhaInicial() {
+        return senhaInicial;
+    }
+
+    public void setSenhaInicial(String senhaInicial) {
+        this.senhaInicial = senhaInicial;
+    }
+
+    public StatusCadastro getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusCadastro status) {
+        this.status = status;
     }
 }

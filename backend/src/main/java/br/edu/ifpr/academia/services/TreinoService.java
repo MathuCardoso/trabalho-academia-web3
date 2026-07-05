@@ -3,7 +3,9 @@ package br.edu.ifpr.academia.services;
 import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.entities.Treino;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import br.edu.ifpr.academia.exceptions.ApiException;
 import br.edu.ifpr.academia.repositories.TreinoRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -34,7 +36,22 @@ public class TreinoService {
      */
     public Treino buscarPorId(Long id) {
         return treinoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Treino nao encontrado"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Treino nao encontrado"));
+    }
+
+    public boolean pertenceAProfessoraDoUsuario(Long treinoId, String login) {
+        return treinoRepository.findById(treinoId)
+                .map(Treino::getProfessora)
+                .map(Professora::getId)
+                .filter(professoraId -> professoraService.pertenceAoUsuario(professoraId, login))
+                .isPresent();
+    }
+
+    public boolean professoraInformadaPertenceAoUsuario(Treino treino, String login) {
+        return treino != null
+                && treino.getProfessora() != null
+                && treino.getProfessora().getId() != null
+                && professoraService.pertenceAoUsuario(treino.getProfessora().getId(), login);
     }
 
     /*
@@ -50,10 +67,7 @@ public class TreinoService {
      * Antes de salvar, busca a professora completa no banco.
      */
     public Treino salvar(Treino treino) {
-        if (treino.getProfessora() != null && treino.getProfessora().getId() != null) {
-            Professora professora = professoraService.buscarPorId(treino.getProfessora().getId());
-            treino.setProfessora(professora);
-        }
+        treino.setProfessora(buscarProfessoraObrigatoria(treino));
 
         return treinoRepository.save(treino);
     }
@@ -68,10 +82,7 @@ public class TreinoService {
         treino.setDescricao(dadosAtualizados.getDescricao());
         treino.setNivel(dadosAtualizados.getNivel());
 
-        if (dadosAtualizados.getProfessora() != null && dadosAtualizados.getProfessora().getId() != null) {
-            Professora professora = professoraService.buscarPorId(dadosAtualizados.getProfessora().getId());
-            treino.setProfessora(professora);
-        }
+        treino.setProfessora(buscarProfessoraObrigatoria(dadosAtualizados));
 
         return treinoRepository.save(treino);
     }
@@ -80,7 +91,8 @@ public class TreinoService {
      * Exclui treino.
      */
     public void excluir(Long id) {
-        treinoRepository.deleteById(id);
+        Treino treino = buscarPorId(id);
+        treinoRepository.delete(treino);
     }
 
     /*
@@ -99,5 +111,13 @@ public class TreinoService {
         Treino treino = buscarPorId(id);
         treino.setStatus(StatusCadastro.INATIVO);
         return treinoRepository.save(treino);
+    }
+
+    private Professora buscarProfessoraObrigatoria(Treino treino) {
+        if (treino.getProfessora() == null || treino.getProfessora().getId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A professora e obrigatoria", "professora");
+        }
+
+        return professoraService.buscarPorId(treino.getProfessora().getId());
     }
 }

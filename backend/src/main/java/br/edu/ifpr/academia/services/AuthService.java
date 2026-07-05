@@ -2,10 +2,14 @@ package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.dtos.LoginRequest;
 import br.edu.ifpr.academia.dtos.LoginResponse;
+import br.edu.ifpr.academia.entities.Aluna;
+import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.PerfilUsuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import br.edu.ifpr.academia.exceptions.ApiException;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -55,13 +59,19 @@ public class AuthService {
          *
          * Se nao encontrar, o UsuarioService lanca erro.
          */
-        Usuario usuario = usuarioService.buscarPorLogin(request.getLogin());
+        Usuario usuario;
+
+        try {
+            usuario = usuarioService.buscarPorLogin(request.getLogin());
+        } catch (ApiException exception) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Login ou senha invalidos", "geral");
+        }
 
         /*
          * Usuario INATIVO nao pode fazer login.
          */
         if (usuario.getStatus() == StatusCadastro.INATIVO) {
-            throw new RuntimeException("Usuario inativo");
+            throw new ApiException(HttpStatus.FORBIDDEN, "Usuario inativo", "login");
         }
 
         /*
@@ -74,7 +84,7 @@ public class AuthService {
                 .matches(request.getSenha(), usuario.getSenha());
 
         if (!senhaValida) {
-            throw new RuntimeException("Login ou senha invalidos");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Login ou senha invalidos", "geral");
         }
 
         /*
@@ -97,14 +107,16 @@ public class AuthService {
         Long professoraId = null;
         String nome = "Administrador";
 
-        if (usuario.getPerfil() == PerfilUsuario.ALUNA && usuario.getAluna() != null) {
-            alunaId = usuario.getAluna().getId();
-            nome = usuario.getAluna().getNome();
+        if (usuario.getPerfil() == PerfilUsuario.ALUNA) {
+            Aluna aluna = usuarioService.buscarAlunaPorUsuario(usuario.getId());
+            alunaId = aluna.getId();
+            nome = aluna.getNome();
         }
 
-        if (usuario.getPerfil() == PerfilUsuario.PROFESSORA && usuario.getProfessora() != null) {
-            professoraId = usuario.getProfessora().getId();
-            nome = usuario.getProfessora().getNome();
+        if (usuario.getPerfil() == PerfilUsuario.PROFESSORA) {
+            Professora professora = usuarioService.buscarProfessoraPorUsuario(usuario.getId());
+            professoraId = professora.getId();
+            nome = professora.getNome();
         }
 
         /*

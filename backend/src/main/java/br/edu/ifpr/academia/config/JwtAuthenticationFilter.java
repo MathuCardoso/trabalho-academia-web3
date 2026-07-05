@@ -1,6 +1,7 @@
 package br.edu.ifpr.academia.config;
 
 import br.edu.ifpr.academia.entities.Usuario;
+import br.edu.ifpr.academia.enums.StatusCadastro;
 import br.edu.ifpr.academia.services.JwtService;
 import br.edu.ifpr.academia.services.UsuarioDetailsService;
 import br.edu.ifpr.academia.services.UsuarioService;
@@ -8,6 +9,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 /*
  * Filtro JWT da aplicação.
@@ -80,73 +84,117 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
          */
         String token = authorizationHeader.substring(7);
 
-        /*
-         * Extrai o login de dentro do token.
-         */
-        String login = jwtService.extrairLogin(token);
-
-        /*
-         * Só autentica se:
-         * - o login existe no token
-         * - ainda não existe usuário autenticado no contexto atual
-         */
-        if (login != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        try {
+            /*
+             * Extrai o login de dentro do token.
+             */
+            String login = jwtService.extrairLogin(token);
 
             /*
-             * Busca o Usuario real do sistema.
-             *
-             * Aqui usamos nossa entidade Usuario para validar status,
-             * login e token.
+             * Só autentica se:
+             * - o login existe no token
+             * - ainda não existe usuário autenticado no contexto atual
              */
-            Usuario usuario = usuarioService.buscarPorLogin(login);
-
-            /*
-             * Valida se o token pertence ao usuário e se não expirou.
-             */
-            if (jwtService.tokenValido(token, usuario)) {
+            if (login != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 /*
-                 * Carrega o usuário no formato que o Spring Security entende.
+                 * Busca o Usuario real do sistema.
                  *
-                 * Aqui entram:
-                 * - username
-                 * - password
-                 * - authorities, como ROLE_ADMIN, ROLE_ALUNA, ROLE_PROFESSORA
+                 * Aqui usamos nossa entidade Usuario para validar status,
+                 * login e token.
                  */
-                UserDetails userDetails = usuarioDetailsService.loadUserByUsername(login);
+                Usuario usuario = usuarioService.buscarPorLogin(login);
+
+                if (usuario.getStatus() == StatusCadastro.INATIVO) {
+                    escreverErro(
+                            response,
+                            HttpStatus.UNAUTHORIZED,
+                            "Nao autenticado",
+                            "Usuario inativo"
+                    );
+                    return;
+                }
 
                 /*
-                 * Cria o objeto de autenticação do Spring Security.
-                 *
-                 * Como estamos usando JWT, não precisamos colocar senha aqui.
+                 * Valida se o token pertence ao usuário e se não expirou.
                  */
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                if (jwtService.tokenValido(token, usuario)) {
 
-                /*
-                 * Adiciona detalhes da requisição, como IP e sessão.
-                 */
-                authenticationToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
+                    /*
+                     * Carrega o usuário no formato que o Spring Security entende.
+                     *
+                     * Aqui entram:
+                     * - username
+                     * - password
+                     * - authorities, como ROLE_ADMIN, ROLE_ALUNA, ROLE_PROFESSORA
+                     */
+                    UserDetails userDetails = usuarioDetailsService.loadUserByUsername(login);
 
-                /*
-                 * Marca o usuário como autenticado no contexto do Spring Security.
-                 *
-                 * A partir daqui, o Spring consegue saber quem é o usuário
-                 * e quais permissões ele tem.
-                 */
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    /*
+                     * Cria o objeto de autenticação do Spring Security.
+                     *
+                     * Como estamos usando JWT, não precisamos colocar senha aqui.
+                     */
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    /*
+                     * Adiciona detalhes da requisição, como IP e sessão.
+                     */
+                    authenticationToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+
+                    /*
+                     * Marca o usuário como autenticado no contexto do Spring Security.
+                     *
+                     * A partir daqui, o Spring consegue saber quem é o usuário
+                     * e quais permissões ele tem.
+                     */
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                }
             }
+        } catch (RuntimeException exception) {
+            escreverErro(
+                    response,
+                    HttpStatus.UNAUTHORIZED,
+                    "Nao autenticado",
+                    "Token de autenticacao invalido ou expirado"
+            );
+            return;
         }
 
         /*
          * Continua o fluxo da requisição.
          */
         filterChain.doFilter(request, response);
+    }
+
+    private void escreverErro(
+            HttpServletResponse response,
+            HttpStatus status,
+            String erro,
+            String mensagem
+    ) throws IOException {
+        String body = """
+                {"status":%d,"erro":"%s","mensagem":"%s","errors":{},"dataHora":"%s"}
+                """.formatted(
+                status.value(),
+                escaparJson(erro),
+                escaparJson(mensagem),
+                LocalDateTime.now()
+        );
+
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(body);
+    }
+
+    private String escaparJson(String valor) {
+        return valor.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

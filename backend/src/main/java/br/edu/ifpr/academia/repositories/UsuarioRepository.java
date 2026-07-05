@@ -40,26 +40,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     boolean existsByLogin(String login);
 
     /*
-     * Busca o Usuario vinculado a uma Aluna.
-     *
-     * No nosso modelo atual, Usuario possui:
-     *
-     * @OneToOne
-     * private Aluna aluna;
-     *
-     * Por isso conseguimos buscar pelo ID da aluna.
+     * Verifica login duplicado ignorando o proprio Usuario.
+     * Usado nas edicoes de CPF/CREF.
      */
-    Optional<Usuario> findByAlunaId(Long alunaId);
-
-    /*
-     * Busca o Usuario vinculado a uma Professora.
-     *
-     * No nosso modelo atual, Usuario possui:
-     *
-     * @OneToOne
-     * private Professora professora;
-     *
-     * Por isso conseguimos buscar pelo ID da professora.
-     */
-    Optional<Usuario> findByProfessoraId(Long professoraId);
+    boolean existsByLoginAndIdNot(String login, Long id);
 }

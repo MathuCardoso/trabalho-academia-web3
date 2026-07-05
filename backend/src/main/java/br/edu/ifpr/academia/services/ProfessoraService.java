@@ -2,8 +2,11 @@ package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.dtos.ProfessoraRequest;
 import br.edu.ifpr.academia.entities.Professora;
+import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import br.edu.ifpr.academia.exceptions.ApiException;
 import br.edu.ifpr.academia.repositories.ProfessoraRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +41,15 @@ public class ProfessoraService {
      */
     public Professora buscarPorId(Long id) {
         return professoraRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Professora nao encontrada"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Professora nao encontrada"));
+    }
+
+    public boolean pertenceAoUsuario(Long professoraId, String login) {
+        return professoraRepository.findById(professoraId)
+                .map(Professora::getUsuario)
+                .map(Usuario::getLogin)
+                .filter(login::equals)
+                .isPresent();
     }
 
     /*
@@ -58,11 +69,11 @@ public class ProfessoraService {
     @Transactional
     public Professora cadastrarComUsuario(ProfessoraRequest request) {
         if (professoraRepository.existsByCref(request.getCref())) {
-            throw new RuntimeException("CREF ja cadastrado");
+            throw new ApiException(HttpStatus.CONFLICT, "CREF ja cadastrado", "cref");
         }
 
         if (professoraRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("E-mail ja cadastrado");
+            throw new ApiException(HttpStatus.CONFLICT, "E-mail ja cadastrado", "email");
         }
 
         Professora professora = new Professora();
@@ -70,13 +81,12 @@ public class ProfessoraService {
         professora.setEmail(request.getEmail());
         professora.setCref(request.getCref());
         professora.setEspecialidade(request.getEspecialidade());
-        professora.setStatus(StatusCadastro.ATIVO);
+        professora.setStatus(statusOuAtivo(request.getStatus()));
 
-        Professora professoraSalva = professoraRepository.save(professora);
+        Usuario usuario = usuarioService.criarUsuarioProfessora(professora, request.getSenhaInicial());
+        professora.setUsuario(usuario);
 
-        usuarioService.criarUsuarioProfessora(professoraSalva, request.getSenhaInicial());
-
-        return professoraSalva;
+        return professoraRepository.save(professora);
     }
 
     /*
@@ -95,13 +105,35 @@ public class ProfessoraService {
      * Nao altera senha.
      * A senha pertence ao Usuario.
      */
+    @Transactional
     public Professora atualizar(Long id, Professora dadosAtualizados) {
         Professora professora = buscarPorId(id);
+
+        if (professoraRepository.existsByCrefAndIdNot(dadosAtualizados.getCref(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "CREF ja cadastrado", "cref");
+        }
+
+        if (professoraRepository.existsByEmailAndIdNot(dadosAtualizados.getEmail(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "E-mail ja cadastrado", "email");
+        }
 
         professora.setNome(dadosAtualizados.getNome());
         professora.setEmail(dadosAtualizados.getEmail());
         professora.setCref(dadosAtualizados.getCref());
         professora.setEspecialidade(dadosAtualizados.getEspecialidade());
+        professora.setStatus(statusOuAtivo(dadosAtualizados.getStatus()));
+
+        if (professora.getUsuario() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da professora nao encontrado");
+        }
+
+        usuarioService.atualizarLogin(professora.getUsuario(), professora.getCref());
+
+        if (professora.getStatus() == StatusCadastro.ATIVO) {
+            usuarioService.ativar(professora.getUsuario().getId());
+        } else {
+            usuarioService.inativar(professora.getUsuario().getId());
+        }
 
         return professoraRepository.save(professora);
     }
@@ -114,7 +146,8 @@ public class ProfessoraService {
      * do que excluir definitivamente.
      */
     public void excluir(Long id) {
-        professoraRepository.deleteById(id);
+        Professora professora = buscarPorId(id);
+        professoraRepository.delete(professora);
     }
 
     /*
@@ -153,5 +186,9 @@ public class ProfessoraService {
         usuarioService.inativarUsuarioDaProfessora(id);
 
         return professoraRepository.save(professora);
+    }
+
+    private StatusCadastro statusOuAtivo(StatusCadastro status) {
+        return status == null ? StatusCadastro.ATIVO : status;
     }
 }

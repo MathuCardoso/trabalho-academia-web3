@@ -4,12 +4,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /*
@@ -21,6 +24,23 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private Map<String, Object> criarErro(
+            HttpStatus status,
+            String erro,
+            String mensagem,
+            Map<String, String> errors
+    ) {
+        Map<String, Object> resposta = new LinkedHashMap<>();
+
+        resposta.put("status", status.value());
+        resposta.put("erro", erro);
+        resposta.put("mensagem", mensagem);
+        resposta.put("errors", errors == null ? Map.of() : errors);
+        resposta.put("dataHora", LocalDateTime.now());
+
+        return resposta;
+    }
+
     /*
      * Trata erros de validacao do @Valid.
      *
@@ -31,7 +51,7 @@ public class GlobalExceptionHandler {
      * - senhaInicial vazia
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> tratarErroDeValidacao(
+    public ResponseEntity<Map<String, Object>> tratarErroDeValidacao(
             MethodArgumentNotValidException exception
     ) {
         Map<String, String> erros = new HashMap<>();
@@ -40,7 +60,28 @@ public class GlobalExceptionHandler {
             erros.put(erro.getField(), erro.getDefaultMessage());
         });
 
-        return ResponseEntity.badRequest().body(erros);
+        return ResponseEntity.badRequest().body(
+                criarErro(
+                        HttpStatus.BAD_REQUEST,
+                        "Erro de validacao",
+                        "Dados invalidos",
+                        erros
+                )
+        );
+    }
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Map<String, Object>> tratarApiException(
+            ApiException exception
+    ) {
+        return ResponseEntity.status(exception.getStatus()).body(
+                criarErro(
+                        exception.getStatus(),
+                        exception.getErro(),
+                        exception.getMessage(),
+                        exception.getErrors()
+                )
+        );
     }
 
     /*
@@ -55,38 +96,31 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> tratarAcessoNegado(
             AccessDeniedException exception
     ) {
-        Map<String, Object> erro = new HashMap<>();
-
-        erro.put("status", HttpStatus.FORBIDDEN.value());
-        erro.put("erro", "Acesso negado");
-        erro.put("mensagem", "Voce nao tem permissao para acessar este recurso");
-        erro.put("dataHora", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(erro);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                criarErro(
+                        HttpStatus.FORBIDDEN,
+                        "Acesso negado",
+                        "Voce nao tem permissao para acessar este recurso",
+                        Map.of()
+                )
+        );
     }
 
-    /*
-     * Trata erros de regra de negocio lançados com RuntimeException.
-     *
-     * Exemplo:
-     * - CPF ja cadastrado
-     * - e-mail ja cadastrado
-     * - usuario nao encontrado
-     * - login ou senha invalidos
-     * - aluna sem matricula ativa
-     */
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, Object>> tratarRuntimeException(
-            RuntimeException exception
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<Map<String, Object>> tratarRequisicaoInvalida(
+            Exception exception
     ) {
-        Map<String, Object> erro = new HashMap<>();
-
-        erro.put("status", HttpStatus.BAD_REQUEST.value());
-        erro.put("erro", "Erro na requisicao");
-        erro.put("mensagem", exception.getMessage());
-        erro.put("dataHora", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(erro);
+        return ResponseEntity.badRequest().body(
+                criarErro(
+                        HttpStatus.BAD_REQUEST,
+                        "Erro na requisicao",
+                        "Corpo da requisicao invalido",
+                        Map.of()
+                )
+        );
     }
 
     /*
@@ -101,14 +135,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> tratarErroDeIntegridade(
             DataIntegrityViolationException exception
     ) {
-        Map<String, Object> erro = new HashMap<>();
-
-        erro.put("status", HttpStatus.CONFLICT.value());
-        erro.put("erro", "Erro de integridade no banco de dados");
-        erro.put("mensagem", "Registro duplicado ou vinculado a outro cadastro");
-        erro.put("dataHora", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(erro);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                criarErro(
+                        HttpStatus.CONFLICT,
+                        "Erro de integridade no banco de dados",
+                        "Registro duplicado ou vinculado a outro cadastro",
+                        Map.of()
+                )
+        );
     }
 
     /*
@@ -120,13 +154,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> tratarErroGenerico(
             Exception exception
     ) {
-        Map<String, Object> erro = new HashMap<>();
-
-        erro.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        erro.put("erro", "Erro interno no servidor");
-        erro.put("mensagem", "Ocorreu um erro inesperado");
-        erro.put("dataHora", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(erro);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                criarErro(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Erro interno no servidor",
+                        "Ocorreu um erro inesperado",
+                        Map.of()
+                )
+        );
     }
 }

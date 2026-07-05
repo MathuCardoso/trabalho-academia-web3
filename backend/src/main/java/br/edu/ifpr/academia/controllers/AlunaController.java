@@ -4,6 +4,7 @@ import br.edu.ifpr.academia.dtos.AlunaRequest;
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.services.AlunaService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,13 +24,14 @@ public class AlunaController {
         this.alunaService = alunaService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'ALUNA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
     @GetMapping
     public List<Aluna> listarTodas() {
         return alunaService.listarTodas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+            + "(hasRole('ALUNA') and @alunaService.pertenceAoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Aluna> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(alunaService.buscarPorId(id));
@@ -38,7 +40,7 @@ public class AlunaController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Aluna> cadastrar(@Valid @RequestBody AlunaRequest request) {
-        return ResponseEntity.ok(alunaService.cadastrarComUsuario(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(alunaService.cadastrarComUsuario(request));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

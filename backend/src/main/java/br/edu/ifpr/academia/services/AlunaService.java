@@ -2,8 +2,11 @@ package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.dtos.AlunaRequest;
 import br.edu.ifpr.academia.entities.Aluna;
+import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
+import br.edu.ifpr.academia.exceptions.ApiException;
 import br.edu.ifpr.academia.repositories.AlunaRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +41,15 @@ public class AlunaService {
      */
     public Aluna buscarPorId(Long id) {
         return alunaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Aluna nao encontrada"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Aluna nao encontrada"));
+    }
+
+    public boolean pertenceAoUsuario(Long alunaId, String login) {
+        return alunaRepository.findById(alunaId)
+                .map(Aluna::getUsuario)
+                .map(Usuario::getLogin)
+                .filter(login::equals)
+                .isPresent();
     }
 
     /*
@@ -58,11 +69,11 @@ public class AlunaService {
     @Transactional
     public Aluna cadastrarComUsuario(AlunaRequest request) {
         if (alunaRepository.existsByCpf(request.getCpf())) {
-            throw new RuntimeException("CPF ja cadastrado");
+            throw new ApiException(HttpStatus.CONFLICT, "CPF ja cadastrado", "cpf");
         }
 
         if (alunaRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("E-mail ja cadastrado");
+            throw new ApiException(HttpStatus.CONFLICT, "E-mail ja cadastrado", "email");
         }
 
         Aluna aluna = new Aluna();
@@ -71,13 +82,12 @@ public class AlunaService {
         aluna.setTelefone(request.getTelefone());
         aluna.setCpf(request.getCpf());
         aluna.setDataNascimento(request.getDataNascimento());
-        aluna.setStatus(StatusCadastro.ATIVO);
+        aluna.setStatus(statusOuAtivo(request.getStatus()));
 
-        Aluna alunaSalva = alunaRepository.save(aluna);
+        Usuario usuario = usuarioService.criarUsuarioAluna(aluna, request.getSenhaInicial());
+        aluna.setUsuario(usuario);
 
-        usuarioService.criarUsuarioAluna(alunaSalva, request.getCpf());
-
-        return alunaSalva;
+        return alunaRepository.save(aluna);
     }
 
     /*
@@ -96,14 +106,36 @@ public class AlunaService {
      * Nao altera senha.
      * A senha pertence ao Usuario.
      */
+    @Transactional
     public Aluna atualizar(Long id, Aluna dadosAtualizados) {
         Aluna aluna = buscarPorId(id);
+
+        if (alunaRepository.existsByCpfAndIdNot(dadosAtualizados.getCpf(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "CPF ja cadastrado", "cpf");
+        }
+
+        if (alunaRepository.existsByEmailAndIdNot(dadosAtualizados.getEmail(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "E-mail ja cadastrado", "email");
+        }
 
         aluna.setNome(dadosAtualizados.getNome());
         aluna.setEmail(dadosAtualizados.getEmail());
         aluna.setTelefone(dadosAtualizados.getTelefone());
         aluna.setCpf(dadosAtualizados.getCpf());
         aluna.setDataNascimento(dadosAtualizados.getDataNascimento());
+        aluna.setStatus(statusOuAtivo(dadosAtualizados.getStatus()));
+
+        if (aluna.getUsuario() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da aluna nao encontrado");
+        }
+
+        usuarioService.atualizarLogin(aluna.getUsuario(), aluna.getCpf());
+
+        if (aluna.getStatus() == StatusCadastro.ATIVO) {
+            usuarioService.ativar(aluna.getUsuario().getId());
+        } else {
+            usuarioService.inativar(aluna.getUsuario().getId());
+        }
 
         return alunaRepository.save(aluna);
     }
@@ -116,7 +148,8 @@ public class AlunaService {
      * do que excluir definitivamente.
      */
     public void excluir(Long id) {
-        alunaRepository.deleteById(id);
+        Aluna aluna = buscarPorId(id);
+        alunaRepository.delete(aluna);
     }
 
     /*
@@ -159,5 +192,9 @@ public class AlunaService {
         usuarioService.inativarUsuarioDaAluna(id);
 
         return alunaRepository.save(aluna);
+    }
+
+    private StatusCadastro statusOuAtivo(StatusCadastro status) {
+        return status == null ? StatusCadastro.ATIVO : status;
     }
 }

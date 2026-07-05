@@ -4,7 +4,9 @@ import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.entities.Matricula;
 import br.edu.ifpr.academia.entities.Treino;
 import br.edu.ifpr.academia.enums.StatusMatricula;
+import br.edu.ifpr.academia.exceptions.ApiException;
 import br.edu.ifpr.academia.repositories.MatriculaRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -42,7 +44,15 @@ public class MatriculaService {
      */
     public Matricula buscarPorId(Long id) {
         return matriculaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Matricula nao encontrada"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Matricula nao encontrada"));
+    }
+
+    public boolean pertenceAAlunaDoUsuario(Long matriculaId, String login) {
+        return matriculaRepository.findById(matriculaId)
+                .map(Matricula::getAluna)
+                .map(Aluna::getId)
+                .filter(alunaId -> alunaService.pertenceAoUsuario(alunaId, login))
+                .isPresent();
     }
 
     /*
@@ -68,18 +78,13 @@ public class MatriculaService {
      * - se vencimento passou, status = VENCIDA
      */
     public Matricula salvar(Matricula matricula) {
-        if (matricula.getAluna() != null && matricula.getAluna().getId() != null) {
-            Aluna aluna = alunaService.buscarPorId(matricula.getAluna().getId());
-            matricula.setAluna(aluna);
-        }
-
-        if (matricula.getTreino() != null && matricula.getTreino().getId() != null) {
-            Treino treino = treinoService.buscarPorId(matricula.getTreino().getId());
-            matricula.setTreino(treino);
-        }
+        matricula.setAluna(buscarAlunaObrigatoria(matricula));
+        matricula.setTreino(buscarTreinoObrigatorio(matricula));
 
         if (matricula.getDataVencimento().isBefore(LocalDate.now())) {
             matricula.setStatus(StatusMatricula.VENCIDA);
+        } else if (matricula.getStatus() == null) {
+            matricula.setStatus(StatusMatricula.ATIVA);
         }
 
         return matriculaRepository.save(matricula);
@@ -91,15 +96,8 @@ public class MatriculaService {
     public Matricula atualizar(Long id, Matricula dadosAtualizados) {
         Matricula matricula = buscarPorId(id);
 
-        if (dadosAtualizados.getAluna() != null && dadosAtualizados.getAluna().getId() != null) {
-            Aluna aluna = alunaService.buscarPorId(dadosAtualizados.getAluna().getId());
-            matricula.setAluna(aluna);
-        }
-
-        if (dadosAtualizados.getTreino() != null && dadosAtualizados.getTreino().getId() != null) {
-            Treino treino = treinoService.buscarPorId(dadosAtualizados.getTreino().getId());
-            matricula.setTreino(treino);
-        }
+        matricula.setAluna(buscarAlunaObrigatoria(dadosAtualizados));
+        matricula.setTreino(buscarTreinoObrigatorio(dadosAtualizados));
 
         matricula.setDataInicio(dadosAtualizados.getDataInicio());
         matricula.setDataVencimento(dadosAtualizados.getDataVencimento());
@@ -107,7 +105,9 @@ public class MatriculaService {
         if (dadosAtualizados.getDataVencimento().isBefore(LocalDate.now())) {
             matricula.setStatus(StatusMatricula.VENCIDA);
         } else {
-            matricula.setStatus(dadosAtualizados.getStatus());
+            matricula.setStatus(dadosAtualizados.getStatus() == null
+                    ? StatusMatricula.ATIVA
+                    : dadosAtualizados.getStatus());
         }
 
         return matriculaRepository.save(matricula);
@@ -117,7 +117,8 @@ public class MatriculaService {
      * Exclui matricula.
      */
     public void excluir(Long id) {
-        matriculaRepository.deleteById(id);
+        Matricula matricula = buscarPorId(id);
+        matriculaRepository.delete(matricula);
     }
 
     /*
@@ -159,5 +160,21 @@ public class MatriculaService {
      */
     public boolean alunaPossuiMatriculaAtiva(Long alunaId) {
         return matriculaRepository.existsByAlunaIdAndStatus(alunaId, StatusMatricula.ATIVA);
+    }
+
+    private Aluna buscarAlunaObrigatoria(Matricula matricula) {
+        if (matricula.getAluna() == null || matricula.getAluna().getId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A aluna e obrigatoria", "aluna");
+        }
+
+        return alunaService.buscarPorId(matricula.getAluna().getId());
+    }
+
+    private Treino buscarTreinoObrigatorio(Matricula matricula) {
+        if (matricula.getTreino() == null || matricula.getTreino().getId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "O treino e obrigatorio", "treino");
+        }
+
+        return treinoService.buscarPorId(matricula.getTreino().getId());
     }
 }
