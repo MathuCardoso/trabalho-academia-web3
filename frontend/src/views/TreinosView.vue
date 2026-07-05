@@ -16,12 +16,25 @@
     import Confirm from "@/components/modal/Confirm.vue";
     import Loading from "@/components/icons/Loading.vue";
     import Select from "@/components/form/Select.vue";
-    import {
-        getProfessora,
-        getProfessoras,
-    } from "@/services/professoraService";
+    import { getProfessoras } from "@/services/professoraService";
+    import Errors from "@/components/form/Errors.vue";
+    import { useAuthStore } from "@/stores/authStore";
 
     provide("headerTitle", "Listagem de Treinos");
+
+    const auth = useAuthStore();
+    const isAdmin = computed(() => auth.usuario?.perfil === "ADMIN");
+    const canEdit = computed(() =>
+        ["ADMIN", "PROFESSORA"].includes(auth.usuario?.perfil)
+    );
+    const canDelete = isAdmin;
+
+    function canEditTreino(treino) {
+        return (
+            isAdmin.value ||
+            treino.professora?.id === auth.usuario?.professoraId
+        );
+    }
 
     const pageLoading = ref(true);
     const submitLoading = ref(false);
@@ -31,63 +44,102 @@
     const modalConfirmRemoveTreino = ref(false);
     const selectedTreinoToDelete = ref(null);
 
-    const Treino = ref({
-        id: "",
-        nome: "",
-        descricao: "",
-        nivel: "INICIANTE",
-        professora: null,
-    });
+    function treinoVazio() {
+        return {
+            id: "",
+            nome: "",
+            descricao: "",
+            nivel: "INICIANTE",
+            professora: null,
+        };
+    }
+
+    const Treino = ref(treinoVazio());
     const professoraId = ref(null);
     const treinos = ref([]);
     const professoras = ref([]);
     onMounted(async () => {
-        treinos.value = await getTreinos();
-        professoras.value = await getProfessoras();
-        pageLoading.value = false;
+        try {
+            await carregarTreinos();
+            professoras.value = (await getProfessoras()).data;
+            if (!isAdmin.value) {
+                professoras.value = professoras.value.filter(
+                    (professora) => professora.id === auth.usuario?.professoraId
+                );
+                professoraId.value = auth.usuario?.professoraId || null;
+            }
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        } finally {
+            pageLoading.value = false;
+        }
     });
 
-    async function prepareUpdate(id) {
-        Treino.value = await getTreino(id);
+    function openModalAddTreino() {
+        if (!isAdmin.value) {
+            professoraId.value = auth.usuario?.professoraId || null;
+        }
         modalAddTreino.value = true;
+    }
+
+    async function prepareUpdate(id) {
+        try {
+            Treino.value = (await getTreino(id)).data;
+            professoraId.value = Treino.value.professora?.id || null;
+            modalAddTreino.value = true;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        }
     }
 
     const errors = ref({});
 
     async function createOrUpdate() {
-        let response = null;
         submitLoading.value = true;
-        if (Treino.value.id) {
-            response = await putTreino(Treino.value);
-        } else {
-            Treino.value.professora = await getProfessora(professoraId.value);
-            response = await postTreino(Treino.value);
-        }
-        if (!response.success) {
-            console.log(response);
-            setTimeout(() => {
-                errors.value = { ...response.errors };
-                submitLoading.value = false;
-            }, 500);
+
+        const professoraSelecionada = isAdmin.value
+            ? professoraId.value || Treino.value.professora?.id
+            : auth.usuario?.professoraId;
+
+        Treino.value.professora = professoraSelecionada
+            ? { id: Number(professoraSelecionada) }
+            : null;
+
+        try {
+            if (Treino.value.id) {
+                await putTreino(Treino.value);
+            } else {
+                await postTreino(Treino.value);
+            }
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            submitLoading.value = false;
             return;
         }
+
         closeModalAddTreino();
 
-        treinos.value = await getTreinos();
+        await carregarTreinos();
     }
 
     async function sendDeleteRequest(id) {
         deleteLoading.value = true;
-        await deleteTreino(id);
-        treinos.value = await getTreinos();
-
-        modalConfirmRemoveTreino.value = false;
-        deleteLoading.value = false;
+        try {
+            await deleteTreino(id);
+            await carregarTreinos();
+            modalConfirmRemoveTreino.value = false;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            modalConfirmRemoveTreino.value = false;
+        } finally {
+            deleteLoading.value = false;
+        }
     }
 
     function closeModalAddTreino() {
         modalAddTreino.value = false;
-        Treino.value = {};
+        Treino.value = treinoVazio();
+        professoraId.value = null;
         errors.value = {};
         submitLoading.value = false;
     }
@@ -95,6 +147,10 @@
     function openModalConfirmRemoveTreino(treino) {
         selectedTreinoToDelete.value = treino;
         modalConfirmRemoveTreino.value = true;
+    }
+
+    async function carregarTreinos() {
+        treinos.value = (await getTreinos()).data;
     }
 </script>
 
@@ -106,20 +162,23 @@
         />
         <nav class="mb-4 grid grid-cols-5 place-items-center">
             <Button
+                v-if="canEdit"
                 bg="var(--color-success)"
                 color="black"
                 class="hover:scale-102"
-                @click="modalAddTreino = true"
+                @click="openModalAddTreino"
             >
                 Adicionar treino
             </Button>
         </nav>
+        <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
             <Modal v-if="modalAddTreino" @close="closeModalAddTreino">
                 <form @submit.prevent="createOrUpdate()">
                     <h1 class="text-center font-bold text-2xl mb-5">
                         Adicionar Treino
                     </h1>
+                    <Errors :error="errors['geral']" />
 
                     <div class="flex gap-4 mb-5">
                         <Input
@@ -151,7 +210,7 @@
                             <option value="AVANCADO">AVANÇADO</option>
                         </Select>
                         <Select
-                            :model="Treino.professora?.id || ''"
+                            :model="professoraId || Treino.professora?.id || ''"
                             @update-value="professoraId = $event"
                             label="Professora"
                             :error="errors['professora']"
@@ -205,11 +264,12 @@
                 </div>
                 <div class="card-group flex flex-col">
                     <label>Professora:</label>
-                    <span>{{ t.professora.nome }}</span>
+                    <span>{{ t.professora?.nome }}</span>
                 </div>
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
                         <Button
+                            v-if="canEdit && canEditTreino(t)"
                             @click="prepareUpdate(t.id)"
                             variant="info"
                             class="hover:-translate-y-1 gap-1"
@@ -220,6 +280,7 @@
                             </template>
                         </Button>
                         <Button
+                            v-if="canDelete"
                             @click="openModalConfirmRemoveTreino(t)"
                             variant="danger"
                             class="hover:-translate-y-1 gap-1"

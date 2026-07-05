@@ -1,5 +1,6 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
+    import Errors from "@/components/form/Errors.vue";
     import Input from "@/components/form/Input.vue";
     import router from "@/router";
     import { useAuthStore } from "@/stores/authStore";
@@ -9,15 +10,15 @@
     const login = ref("admin");
     const senha = ref("admin123");
 
-    const errors = ref([]);
+    const errors = ref({});
 
     async function sendRequest() {
         try {
+            errors.value = {};
             await auth.login(login.value, senha.value);
             router.push("/");
         } catch (error) {
-            console.log(error);
-            errors.value = error.errors;
+            errors.value = error.errors || { geral: error.message };
         }
     }
 </script>
@@ -26,6 +27,8 @@
     <div class="form-wrapper">
         <form @submit.prevent="sendRequest()">
             <h1>Login</h1>
+
+            <Errors :error="errors['geral']" />
 
             <Input
                 @update-value="login = $event"

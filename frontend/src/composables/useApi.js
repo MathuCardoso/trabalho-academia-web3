@@ -3,23 +3,38 @@ import router from "@/router";
 import { useAuthStore } from "@/stores/authStore";
 
 export function useApi() {
-    async function request(uri, options) {
-        const response = await fetch(API_URL + uri, {
-            ...options,
-            headers: getHeaders(),
-        });
+    async function request(uri, options = {}) {
+        let response;
 
-        if (response.status == 401 || response.status == 403) {
-            const auth = useAuthStore();
-            auth.logout();
-            router.push("/login");
+        try {
+            response = await fetch(buildUrl(uri), {
+                ...options,
+                headers: {
+                    ...getHeaders(),
+                    ...(options.headers || {}),
+                },
+            });
+        } catch (error) {
+            throw {
+                success: false,
+                message: "Nao foi possivel conectar ao servidor.",
+                errors: { geral: "Nao foi possivel conectar ao servidor." },
+                data: null,
+                status: 0,
+            };
         }
 
         let data = null;
         try {
             data = await response.json();
         } catch (error) {
-            console.log("No Content Returned");
+            data = null;
+        }
+
+        if (response.status == 401) {
+            const auth = useAuthStore();
+            auth.logout();
+            router.push("/login");
         }
 
         return {
@@ -27,6 +42,13 @@ export function useApi() {
             status: response.status,
             data: data,
         };
+    }
+
+    function buildUrl(uri) {
+        const baseUrl = API_URL.replace(/\/+$/, "");
+        const path = uri.replace(/^\/+/, "");
+
+        return `${baseUrl}/${path}`;
     }
 
     function getHeaders() {
@@ -43,15 +65,59 @@ export function useApi() {
         return headers;
     }
 
+    function normalizeErrors(data) {
+        if (!data) return {};
+
+        if (
+            data.errors &&
+            typeof data.errors === "object" &&
+            Object.keys(data.errors).length
+        ) {
+            return data.errors;
+        }
+
+        if (
+            data.erros &&
+            typeof data.erros === "object" &&
+            Object.keys(data.erros).length
+        ) {
+            return data.erros;
+        }
+
+        if (data.mensagem) {
+            return { geral: data.mensagem };
+        }
+
+        if (data.message) {
+            return { geral: data.message };
+        }
+
+        if (typeof data === "object") {
+            return data;
+        }
+
+        return {};
+    }
+
+    function normalizeMessage(data, fallback) {
+        return data?.mensagem || data?.message || fallback;
+    }
+
+    function errorResponse(response, fallback) {
+        return {
+            success: false,
+            message: normalizeMessage(response.data, fallback),
+            errors: normalizeErrors(response.data),
+            data: response.data,
+            status: response.status,
+        };
+    }
+
     async function get(uri) {
         const response = await request(uri, { method: "GET" });
         if (!response.ok)
-            return {
-                success: false,
-                message: "Erro ao buscar dados.",
-                status: response.status,
-            };
-        console.log(response);
+            throw errorResponse(response, "Erro ao buscar dados.");
+
         return {
             success: true,
             message: "Dados buscados com sucesso",
@@ -63,15 +129,9 @@ export function useApi() {
     async function post(uri, fields) {
         const response = await request(uri, {
             method: "POST",
-            body: JSON.stringify(fields),
+            body: JSON.stringify(fields || {}),
         });
-        if (!response.ok)
-            throw {
-                success: false,
-                message: "Erro ao criar registro.",
-                errors: response.data,
-                status: response.status,
-            };
+        if (!response.ok) throw errorResponse(response, "Erro ao criar registro.");
 
         return {
             success: true,
@@ -84,15 +144,10 @@ export function useApi() {
     async function put(uri, fields) {
         const response = await request(uri, {
             method: "PUT",
-            body: JSON.stringify(fields),
+            body: JSON.stringify(fields || {}),
         });
         if (!response.ok)
-            throw {
-                success: false,
-                message: "Erro ao atualizar registro",
-                data: response.data,
-                status: response.status,
-            };
+            throw errorResponse(response, "Erro ao atualizar registro");
 
         return {
             success: true,
@@ -105,11 +160,8 @@ export function useApi() {
     async function remove(uri) {
         const response = await request(uri, { method: "DELETE" });
         if (!response.ok)
-            throw {
-                success: false,
-                message: "Erro ao remover registro",
-                status: response.status,
-            };
+            throw errorResponse(response, "Erro ao remover registro");
+
         return {
             success: true,
             message: "Registro removido com sucesso",

@@ -1,31 +1,46 @@
 <script setup>
-    import { onMounted, ref } from "vue";
+    import { computed } from "vue";
     import { useRoute } from "vue-router";
+    import { useAuthStore } from "@/stores/authStore";
 
     const route = useRoute();
+    const auth = useAuthStore();
 
     const sideBarOptions = [
         {
             name: "Dashboard",
             route: "/",
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
         {
             name: "Alunas",
             route: "/alunas",
+            roles: ["ADMIN", "PROFESSORA"],
         },
         {
             name: "Professoras",
             route: "/professoras",
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
         {
             name: "Treinos",
             route: "/treinos",
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
         {
             name: "Matrículas",
             route: "/matriculas",
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
     ];
+
+    const visibleOptions = computed(() => {
+        const perfil = auth.usuario?.perfil;
+
+        return sideBarOptions.filter((option) =>
+            option.roles.includes(perfil)
+        );
+    });
 </script>
 
 <template>
@@ -39,7 +54,7 @@
         <nav>
             <ul>
                 <RouterLink
-                    v-for="s in sideBarOptions"
+                    v-for="s in visibleOptions"
                     :key="s.name"
                     :to="s.route"
                 >

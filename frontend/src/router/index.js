@@ -10,8 +10,16 @@ const router = createRouter({
 router.beforeEach((to, from) => {
     const auth = useAuthStore();
 
-    if ((to.meta.requiresAuth && !auth.isAuthenticated)) {
+    if (to.meta.requiresAuth && !auth.isAuthenticated) {
         return "/login";
+    }
+
+    if (
+        to.meta.roles &&
+        auth.usuario?.perfil &&
+        !to.meta.roles.includes(auth.usuario.perfil)
+    ) {
+        return "/";
     }
 });
 

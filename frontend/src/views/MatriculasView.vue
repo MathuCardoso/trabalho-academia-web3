@@ -1,5 +1,6 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
+    import Input from "@/components/form/Input.vue";
     import MainLayout from "@/components/layout/MainLayout.vue";
     import Card from "@/components/ui/Card.vue";
     import Modal from "@/components/modal/Modal.vue";
@@ -7,17 +8,23 @@
         deleteMatricula,
         getMatricula,
         getMatriculas,
+        getMatriculasPorAluna,
         postMatricula,
         putMatricula,
     } from "@/services/matriculaService";
     import { Pencil, Trash2 } from "@lucide/vue";
-    import { onMounted, provide, ref } from "vue";
+    import { computed, onMounted, provide, ref } from "vue";
     import Confirm from "@/components/modal/Confirm.vue";
     import Loading from "@/components/icons/Loading.vue";
     import Select from "@/components/form/Select.vue";
-    import { getAluna, getAlunas } from "@/services/alunaService";
-    import { getTreino, getTreinos } from "@/services/treinoService";
+    import { getAlunas } from "@/services/alunaService";
+    import { getTreinos } from "@/services/treinoService";
+    import Errors from "@/components/form/Errors.vue";
+    import { useAuthStore } from "@/stores/authStore";
     provide("headerTitle", "Listagem de Matrículas");
+
+    const auth = useAuthStore();
+    const canManage = computed(() => auth.usuario?.perfil === "ADMIN");
 
     const pageLoading = ref(true);
     const submitLoading = ref(false);
@@ -27,14 +34,18 @@
     const modalConfirmRemoveMatricula = ref(false);
     const selectedMatriculaToDelete = ref(null);
 
-    const Matricula = ref({
-        id: "",
-        aluna: null,
-        treino: null,
-        dataInicio: "",
-        dataVencimento: "",
-        status: "ATIVO",
-    });
+    function matriculaVazia() {
+        return {
+            id: "",
+            aluna: null,
+            treino: null,
+            dataInicio: "",
+            dataVencimento: "",
+            status: "ATIVA",
+        };
+    }
+
+    const Matricula = ref(matriculaVazia());
     const alunaId = ref(null);
     const treinoId = ref(null);
 
@@ -42,54 +53,91 @@
     const alunas = ref([]);
     const treinos = ref([]);
     onMounted(async () => {
-        matriculas.value = await getMatriculas();
-        treinos.value = await getTreinos();
-        alunas.value = await getAlunas();
-        console.log(alunas.value);
-        pageLoading.value = false;
+        try {
+            await carregarMatriculas();
+            treinos.value = (await getTreinos()).data;
+            if (canManage.value) {
+                alunas.value = (await getAlunas()).data;
+            }
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        } finally {
+            pageLoading.value = false;
+        }
     });
 
+    async function carregarMatriculas() {
+        if (auth.usuario?.perfil === "ALUNA" && auth.usuario?.alunaId) {
+            matriculas.value = (
+                await getMatriculasPorAluna(auth.usuario.alunaId)
+            ).data;
+            return;
+        }
+
+        matriculas.value = (await getMatriculas()).data;
+    }
+
     async function prepareUpdate(id) {
-        Matricula.value = await getMatricula(id);
-        modalAddMatricula.value = true;
+        try {
+            Matricula.value = (await getMatricula(id)).data;
+            alunaId.value = Matricula.value.aluna?.id || null;
+            treinoId.value = Matricula.value.treino?.id || null;
+            modalAddMatricula.value = true;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        }
     }
 
     const errors = ref({});
     async function createOrUpdate() {
-        let response = null;
         submitLoading.value = true;
-        if (Matricula.value.id) {
-            response = await putMatricula(Matricula.value);
-        } else {
-            Matricula.value.aluna = await getAluna(alunaId.value);
-            Matricula.value.treino = await getTreino(treinoId.value);
-            response = await postMatricula(Matricula.value);
-        }
-        if (!response.success) {
-            console.log(response);
-            setTimeout(() => {
-                errors.value = { ...response.errors };
-                submitLoading.value = false;
-            }, 500);
+
+        const alunaSelecionada = alunaId.value || Matricula.value.aluna?.id;
+        const treinoSelecionado = treinoId.value || Matricula.value.treino?.id;
+
+        Matricula.value.aluna = alunaSelecionada
+            ? { id: Number(alunaSelecionada) }
+            : null;
+        Matricula.value.treino = treinoSelecionado
+            ? { id: Number(treinoSelecionado) }
+            : null;
+
+        try {
+            if (Matricula.value.id) {
+                await putMatricula(Matricula.value);
+            } else {
+                await postMatricula(Matricula.value);
+            }
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            submitLoading.value = false;
             return;
         }
+
         closeModalAddMatricula();
 
-        matriculas.value = await getMatricula();
+        await carregarMatriculas();
     }
 
     async function sendDeleteRequest(id) {
         deleteLoading.value = true;
-        await deleteMatricula(id);
-        matriculas.value = await getMatriculas();
-
-        modalConfirmRemoveMatricula.value = false;
-        deleteLoading.value = false;
+        try {
+            await deleteMatricula(id);
+            await carregarMatriculas();
+            modalConfirmRemoveMatricula.value = false;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            modalConfirmRemoveMatricula.value = false;
+        } finally {
+            deleteLoading.value = false;
+        }
     }
 
     function closeModalAddMatricula() {
         modalAddMatricula.value = false;
-        Matricula.value = {};
+        Matricula.value = matriculaVazia();
+        alunaId.value = null;
+        treinoId.value = null;
         errors.value = {};
         submitLoading.value = false;
     }
@@ -108,6 +156,7 @@
         />
         <nav class="mb-4 grid grid-cols-5 place-items-center">
             <Button
+                v-if="canManage"
                 bg="var(--color-success)"
                 color="black"
                 class="hover:scale-102"
@@ -116,16 +165,18 @@
                 Adicionar matrícula
             </Button>
         </nav>
+        <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
             <Modal v-if="modalAddMatricula" @close="closeModalAddMatricula">
                 <form @submit.prevent="createOrUpdate()">
                     <h1 class="text-center font-bold text-2xl mb-5">
                         Adicionar Matrícula
                     </h1>
+                    <Errors :error="errors['geral']" />
 
                     <div class="flex gap-4 mb-5">
                         <Select
-                            :model="Matricula.aluna?.id || ''"
+                            :model="alunaId || Matricula.aluna?.id || ''"
                             @update-value="alunaId = $event"
                             label="Aluna"
                             :error="errors['aluna']"
@@ -139,7 +190,7 @@
                             </option>
                         </Select>
                         <Select
-                            :model="Matricula.treino?.id || ''"
+                            :model="treinoId || Matricula.treino?.id || ''"
                             @update-value="treinoId = $event"
                             label="Treino"
                             :error="errors['treino']"
@@ -151,6 +202,36 @@
                             >
                                 {{ t.nome }} - {{ t.nivel }}
                             </option>
+                        </Select>
+                    </div>
+
+                    <div class="flex gap-4 mb-5">
+                        <Input
+                            :model="Matricula.dataInicio"
+                            @update-value="Matricula.dataInicio = $event"
+                            label="Data de Início"
+                            type="date"
+                            :error="errors['dataInicio']"
+                        />
+                        <Input
+                            :model="Matricula.dataVencimento"
+                            @update-value="Matricula.dataVencimento = $event"
+                            label="Data de Vencimento"
+                            type="date"
+                            :error="errors['dataVencimento']"
+                        />
+                    </div>
+
+                    <div class="flex gap-4 mb-5">
+                        <Select
+                            :model="Matricula.status"
+                            @update-value="Matricula.status = $event"
+                            label="Status"
+                            :error="errors['status']"
+                        >
+                            <option value="ATIVA" selected>ATIVA</option>
+                            <option value="VENCIDA">VENCIDA</option>
+                            <option value="CANCELADA">CANCELADA</option>
                         </Select>
                     </div>
 
@@ -173,24 +254,29 @@
         >
             <Card v-if="matriculas" v-for="m in matriculas" :key="m.id">
                 <template #header>
-                    <h3>{{ m.aluna.nome }}</h3>
+                    <h3>{{ m.aluna?.nome }}</h3>
                     <p class="id">#{{ m.id }}</p>
                 </template>
                 <div class="card-group flex flex-col">
                     <label>Descrição:</label>
-                    <span>{{ m.treino.nome }}</span>
+                    <span>{{ m.treino?.nome }}</span>
                 </div>
                 <div class="card-group flex flex-col">
                     <label>Data de Início:</label>
                     <span>{{ m.dataInicio }}</span>
                 </div>
                 <div class="card-group flex flex-col">
-                    <label>Data de Encerramento:</label>
-                    <span>{{ m.dataEncerramento }}</span>
+                    <label>Data de Vencimento:</label>
+                    <span>{{ m.dataVencimento }}</span>
+                </div>
+                <div class="card-group flex flex-col">
+                    <label>Status:</label>
+                    <span>{{ m.status }}</span>
                 </div>
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
                         <Button
+                            v-if="canManage"
                             @click="prepareUpdate(m.id)"
                             variant="info"
                             class="hover:-translate-y-1 gap-1"
@@ -201,6 +287,7 @@
                             </template>
                         </Button>
                         <Button
+                            v-if="canManage"
                             @click="openModalConfirmRemoveMatricula(m)"
                             variant="danger"
                             class="hover:-translate-y-1 gap-1"

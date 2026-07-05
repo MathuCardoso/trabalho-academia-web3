@@ -12,12 +12,17 @@
         putAluna,
     } from "@/services/alunaService";
     import { Pencil, Trash2 } from "@lucide/vue";
-    import { onMounted, provide, ref } from "vue";
+    import { computed, onMounted, provide, ref } from "vue";
     import Confirm from "@/components/modal/Confirm.vue";
     import Loading from "@/components/icons/Loading.vue";
     import Select from "@/components/form/Select.vue";
+    import Errors from "@/components/form/Errors.vue";
+    import { useAuthStore } from "@/stores/authStore";
 
     provide("headerTitle", "Listagem de Alunas");
+
+    const auth = useAuthStore();
+    const canManage = computed(() => auth.usuario?.perfil === "ADMIN");
 
     const pageLoading = ref(true);
     const submitLoading = ref(false);
@@ -27,19 +32,29 @@
     const modalConfirmRemoveAluna = ref(false);
     const selectedAlunaToDelete = ref(null);
 
-    const Aluna = ref({
-        id: "",
-        nome: "",
-        email: "",
-        telefone: "",
-        dataNascimento: "",
-        cpf: "",
-        status: "ATIVO",
-    });
+    function alunaVazia() {
+        return {
+            id: "",
+            nome: "",
+            email: "",
+            telefone: "",
+            dataNascimento: "",
+            cpf: "",
+            senhaInicial: "",
+            status: "ATIVO",
+        };
+    }
+
+    const Aluna = ref(alunaVazia());
 
     async function prepareUpdate(id) {
-        Aluna.value = (await getAluna(id)).data;
-        modalAddAluna.value = true;
+        try {
+            Aluna.value = (await getAluna(id)).data;
+            Aluna.value.senhaInicial = "";
+            modalAddAluna.value = true;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        }
     }
 
     const errors = ref({});
@@ -49,36 +64,39 @@
         submitLoading.value = true;
         try {
             if (Aluna.value.id) {
-                response = await putAluna(Aluna.value);
+                const payload = { ...Aluna.value };
+                delete payload.senhaInicial;
+                response = await putAluna(payload);
             } else {
                 response = await postAluna(Aluna.value);
             }
         } catch (e) {
-            errors.value = e.errors;
-            setTimeout(() => {
-                console.log(errors.value);
-                submitLoading.value = false;
-            }, 500);
+            errors.value = e.errors || { geral: e.message };
+            submitLoading.value = false;
             return;
         }
         closeModalAddAluna();
 
-        alunas.value = (await getAlunas()).data;
-        console.log(alunas.value);
+        await carregarAlunas();
     }
 
     async function sendDeleteRequest(id) {
         deleteLoading.value = true;
-        await deleteAluna(id);
-        alunas.value = await getAlunas();
-
-        modalConfirmRemoveAluna.value = false;
-        deleteLoading.value = false;
+        try {
+            await deleteAluna(id);
+            await carregarAlunas();
+            modalConfirmRemoveAluna.value = false;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            modalConfirmRemoveAluna.value = false;
+        } finally {
+            deleteLoading.value = false;
+        }
     }
 
     function closeModalAddAluna() {
         modalAddAluna.value = false;
-        Aluna.value = {};
+        Aluna.value = alunaVazia();
         errors.value = {};
         submitLoading.value = false;
     }
@@ -89,10 +107,18 @@
     }
 
     const alunas = ref([]);
-    onMounted(async () => {
+    async function carregarAlunas() {
         alunas.value = (await getAlunas()).data;
-        console.log(alunas.value);
-        pageLoading.value = false;
+    }
+
+    onMounted(async () => {
+        try {
+            await carregarAlunas();
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        } finally {
+            pageLoading.value = false;
+        }
     });
 </script>
 
@@ -104,6 +130,7 @@
         />
         <nav class="mb-4 grid grid-cols-6 place-items-center">
             <Button
+                v-if="canManage"
                 bg="var(--color-success)"
                 color="black"
                 class="hover:scale-102"
@@ -112,12 +139,14 @@
                 Adicionar aluna
             </Button>
         </nav>
+        <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
             <Modal v-if="modalAddAluna" @close="closeModalAddAluna">
                 <form @submit.prevent="createOrUpdate()">
                     <h1 class="text-center font-bold text-2xl mb-5">
                         Adicionar Aluna
                     </h1>
+                    <Errors :error="errors['geral']" />
 
                     <div class="flex gap-4 mb-5">
                         <Input
@@ -132,8 +161,7 @@
                             :model="Aluna.dataNascimento"
                             @update-value="Aluna.dataNascimento = $event"
                             label="Data de Nascimento"
-                            placeholder="Ex: 20/11/2005"
-                            mask="##/##/####"
+                            type="date"
                             :error="errors['dataNascimento']"
                         />
                     </div>
@@ -164,6 +192,17 @@
                             placeholder="Insira o CPF"
                             mask="###.###.###-##"
                             :error="errors['cpf']"
+                        />
+                    </div>
+
+                    <div class="gap-4 mb-5">
+                        <Input
+                            v-if="!Aluna.id"
+                            :model="Aluna.senhaInicial"
+                            @update-value="Aluna.senhaInicial = $event"
+                            label="Senha Inicial"
+                            type="password"
+                            :error="errors['senhaInicial']"
                         />
                     </div>
 
@@ -231,6 +270,7 @@
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
                         <Button
+                            v-if="canManage"
                             @click="prepareUpdate(a.id)"
                             variant="info"
                             class="hover:-translate-y-1 gap-1"
@@ -241,6 +281,7 @@
                             </template>
                         </Button>
                         <Button
+                            v-if="canManage"
                             @click="openModalConfirmRemoveAluna(a)"
                             variant="danger"
                             class="hover:-translate-y-1 gap-1"

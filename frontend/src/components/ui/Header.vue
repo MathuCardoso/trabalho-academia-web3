@@ -1,8 +1,19 @@
 <script setup lang="ts">
+    import { LogOut } from "@lucide/vue";
     import { inject } from "vue";
+    import { useRouter } from "vue-router";
+    import { useAuthStore } from "@/stores/authStore";
     import UserIcon from "../icons/UserIcon.vue";
+
     const title = inject("headerTitle");
     const description = inject("headerDescription", null);
+    const auth = useAuthStore();
+    const router = useRouter();
+
+    function logout() {
+        auth.logout();
+        router.replace("/login");
+    }
 </script>
 
 <template>
@@ -13,9 +24,21 @@
         </div>
         <nav>
             <ul>
-                <li><UserIcon /></li>
-                <li>Opção 2</li>
-                <li>Opção 3</li>
+                <li class="user">
+                    <UserIcon />
+                    <span>{{ auth.usuario?.nome }}</span>
+                </li>
+                <li>
+                    <button
+                        type="button"
+                        title="Encerrar sessão"
+                        aria-label="Encerrar sessão"
+                        @click="logout"
+                    >
+                        <LogOut :size="19" />
+                        <span>Sair</span>
+                    </button>
+                </li>
             </ul>
         </nav>
     </header>
@@ -45,6 +68,30 @@
 
     ul {
         display: flex;
+        align-items: center;
         gap: 15px;
+    }
+
+    li.user,
+    button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    button {
+        padding: 8px 10px;
+        color: var(--color-pink-accent);
+        cursor: pointer;
+    }
+
+    button:hover {
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        li.user span {
+            display: none;
+        }
     }
 </style>

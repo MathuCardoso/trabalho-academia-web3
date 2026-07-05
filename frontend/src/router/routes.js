@@ -30,6 +30,7 @@ export default [
         meta: {
             title: "Alunas",
             requiresAuth: true,
+            roles: ["ADMIN", "PROFESSORA"],
         },
     },
     {
@@ -39,6 +40,7 @@ export default [
         meta: {
             title: "Professoras",
             requiresAuth: true,
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
     },
     {
@@ -48,6 +50,7 @@ export default [
         meta: {
             title: "Treinos",
             requiresAuth: true,
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
     },
     {
@@ -55,8 +58,9 @@ export default [
         name: "matriculasList",
         component: MatriculasView,
         meta: {
-            title: "Treinos",
+            title: "Matrículas",
             requiresAuth: true,
+            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },
     },
 ];

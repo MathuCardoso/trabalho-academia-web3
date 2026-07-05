@@ -14,15 +14,18 @@ export const useAuthStore = defineStore("auth", () => {
     async function login(login, senha) {
         const response = await loginUser(login, senha);
         const data = response.data;
-        console.log(data);
 
         token.value = data.token;
 
         usuario.value = {
             id: data.usuarioId,
+            usuarioId: data.usuarioId,
+            login: data.login,
             nome: data.nome,
             perfil: data.perfil,
             status: data.status,
+            alunaId: data.alunaId,
+            professoraId: data.professoraId,
         };
 
         localStorage.setItem("token", token.value);
@@ -30,7 +33,9 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     function logout() {
-        ((token.value = null), (usuario.value = null), localStorage.removeItem("token"));
+        token.value = null;
+        usuario.value = null;
+        localStorage.removeItem("token");
         localStorage.removeItem("usuario");
     }
 

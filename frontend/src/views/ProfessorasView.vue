@@ -12,12 +12,17 @@
         putProfessora,
     } from "@/services/professoraService";
     import { Pencil, Trash2 } from "@lucide/vue";
-    import { onMounted, provide, ref } from "vue";
+    import { computed, onMounted, provide, ref } from "vue";
     import Confirm from "@/components/modal/Confirm.vue";
     import Loading from "@/components/icons/Loading.vue";
     import Select from "@/components/form/Select.vue";
+    import Errors from "@/components/form/Errors.vue";
+    import { useAuthStore } from "@/stores/authStore";
 
     provide("headerTitle", "Listagem de Professoras");
+
+    const auth = useAuthStore();
+    const canManage = computed(() => auth.usuario?.perfil === "ADMIN");
 
     const pageLoading = ref(true);
     const submitLoading = ref(false);
@@ -27,53 +32,71 @@
     const modalConfirmRemoveProfessora = ref(false);
     const selectedProfessoraToDelete = ref(null);
 
-    const Professora = ref({
-        id: "",
-        nome: "",
-        email: "",
-        especialidade: "",
-        status: "ATIVO",
-    });
-
-    async function prepareUpdate(id) {
-        Professora.value = await getProfessora(id);
-        modalAddProfessora.value = true;
+    function professoraVazia() {
+        return {
+            id: "",
+            nome: "",
+            email: "",
+            cref: "",
+            especialidade: "",
+            senhaInicial: "",
+            status: "ATIVO",
+        };
     }
 
-    const response = ref({});
+    const Professora = ref(professoraVazia());
+
+    async function prepareUpdate(id) {
+        try {
+            Professora.value = (await getProfessora(id)).data;
+            Professora.value.senhaInicial = "";
+            modalAddProfessora.value = true;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        }
+    }
+
     const errors = ref({});
 
     async function createOrUpdate() {
         submitLoading.value = true;
-        if (Professora.value.id) {
-            response.value = await putProfessora(Professora.value);
-        } else {
-            response.value = await postProfessora(Professora.value);
-        }
-        if (!response.value.success) {
-            setTimeout(() => {
-                errors.value = { ...response.value.errors };
-                submitLoading.value = false;
-            }, 500);
+
+        try {
+            if (Professora.value.id) {
+                const payload = { ...Professora.value };
+                delete payload.senhaInicial;
+                await putProfessora(payload);
+            } else {
+                await postProfessora(Professora.value);
+            }
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            submitLoading.value = false;
             return;
         }
+
         closeModalAddProfessora();
 
-        professoras.value = await getProfessoras();
+        await carregarProfessoras();
     }
 
     async function sendDeleteRequest(id) {
         deleteLoading.value = true;
-        response.value = await deleteProfessora(id);
-        professoras.value = await getProfessoras();
-
-        modalConfirmRemoveProfessora.value = false;
-        deleteLoading.value = false;
+        try {
+            await deleteProfessora(id);
+            await carregarProfessoras();
+            modalConfirmRemoveProfessora.value = false;
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+            modalConfirmRemoveProfessora.value = false;
+        } finally {
+            deleteLoading.value = false;
+        }
     }
 
     function closeModalAddProfessora() {
         modalAddProfessora.value = false;
-        Professora.value = {};
+        Professora.value = professoraVazia();
         errors.value = {};
         submitLoading.value = false;
     }
@@ -84,9 +107,18 @@
     }
 
     const professoras = ref([]);
+    async function carregarProfessoras() {
+        professoras.value = (await getProfessoras()).data;
+    }
+
     onMounted(async () => {
-        professoras.value = await getProfessoras();
-        pageLoading.value = false;
+        try {
+            await carregarProfessoras();
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        } finally {
+            pageLoading.value = false;
+        }
     });
 </script>
 
@@ -98,6 +130,7 @@
         />
         <nav class="mb-4 grid grid-cols-4 place-items-center">
             <Button
+                v-if="canManage"
                 bg="var(--color-success)"
                 color="black"
                 class="hover:scale-102"
@@ -106,12 +139,14 @@
                 Adicionar professora
             </Button>
         </nav>
+        <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
             <Modal v-if="modalAddProfessora" @close="closeModalAddProfessora">
                 <form @submit.prevent="createOrUpdate()">
                     <h1 class="text-center font-bold text-2xl mb-5">
                         Adicionar Professora
                     </h1>
+                    <Errors :error="errors['geral']" />
 
                     <div class="flex gap-4 mb-5">
                         <Input
@@ -132,6 +167,13 @@
 
                     <div class="flex gap-4 mb-5">
                         <Input
+                            :model="Professora.cref"
+                            @update-value="Professora.cref = $event"
+                            label="CREF"
+                            placeholder="Insira o CREF"
+                            :error="errors['cref']"
+                        />
+                        <Input
                             :model="Professora.especialidade"
                             @update-value="Professora.especialidade = $event"
                             label="Especialidade"
@@ -148,6 +190,17 @@
                             <option value="ATIVO" selected>ATIVO</option>
                             <option value="INATIVO">INATIVO</option>
                         </Select>
+                    </div>
+
+                    <div v-if="!Professora.id" class="flex gap-4 mb-5">
+                        <Input
+                            :model="Professora.senhaInicial"
+                            @update-value="Professora.senhaInicial = $event"
+                            label="Senha inicial"
+                            type="password"
+                            placeholder="Insira a senha inicial"
+                            :error="errors['senhaInicial']"
+                        />
                     </div>
 
                     <Button
@@ -177,6 +230,10 @@
                     <span>{{ p.email }}</span>
                 </div>
                 <div class="card-group flex flex-col">
+                    <label>CREF:</label>
+                    <span>{{ p.cref }}</span>
+                </div>
+                <div class="card-group flex flex-col">
                     <label>Especialidade:</label>
                     <span>{{ p.especialidade }}</span>
                 </div>
@@ -194,6 +251,7 @@
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
                         <Button
+                            v-if="canManage"
                             @click="prepareUpdate(p.id)"
                             variant="info"
                             class="hover:-translate-y-1 gap-1"
@@ -204,6 +262,7 @@
                             </template>
                         </Button>
                         <Button
+                            v-if="canManage"
                             @click="openModalConfirmRemoveProfessora(p)"
                             variant="danger"
                             class="hover:-translate-y-1 gap-1"
