@@ -23,7 +23,7 @@ public class AlunaController {
         this.alunaService = alunaService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ALUNA')")
     @GetMapping
     public List<Aluna> listarTodas() {
         return alunaService.listarTodas();

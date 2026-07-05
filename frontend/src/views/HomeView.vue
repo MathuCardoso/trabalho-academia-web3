@@ -1,8 +1,11 @@
 <script setup>
     import MainLayout from "@/components/layout/MainLayout.vue";
-    import { provide, ref } from "vue";
+    import { useAuthStore } from "@/stores/authStore";
+    import { provide } from "vue";
 
-    provide("headerTitle", "Olá, Matheus!");
+    const auth = useAuthStore();
+
+    provide("headerTitle", "Olá, " + auth.usuario.nome);
     provide("headerDescription", "Bem-vindo ao sistema de gestão de academia");
 </script>
 

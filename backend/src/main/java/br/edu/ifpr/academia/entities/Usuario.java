@@ -68,7 +68,7 @@ public class Usuario {
      * Preenchido apenas quando perfil = ALUNA.
      * Usuario ADMIN e PROFESSORA deixam isso null.
      */
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "aluna_id", unique = true)
     private Aluna aluna;
 
@@ -78,7 +78,7 @@ public class Usuario {
      * Preenchido apenas quando perfil = PROFESSORA.
      * Usuario ADMIN e ALUNA deixam isso null.
      */
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "professora_id", unique = true)
     private Professora professora;
 }

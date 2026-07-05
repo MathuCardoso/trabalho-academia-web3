@@ -75,7 +75,7 @@ public class AlunaService {
 
         Aluna alunaSalva = alunaRepository.save(aluna);
 
-        usuarioService.criarUsuarioAluna(alunaSalva, request.getSenhaInicial());
+        usuarioService.criarUsuarioAluna(alunaSalva, request.getCpf());
 
         return alunaSalva;
     }

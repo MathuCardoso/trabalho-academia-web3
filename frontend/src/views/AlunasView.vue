@@ -31,7 +31,6 @@
         id: "",
         nome: "",
         email: "",
-        senha: "",
         telefone: "",
         dataNascimento: "",
         cpf: "",
@@ -39,7 +38,7 @@
     });
 
     async function prepareUpdate(id) {
-        Aluna.value = await getAluna(id);
+        Aluna.value = (await getAluna(id)).data;
         modalAddAluna.value = true;
     }
 
@@ -48,21 +47,24 @@
     async function createOrUpdate() {
         let response = null;
         submitLoading.value = true;
-        if (Aluna.value.id) {
-            response = await putAluna(Aluna.value);
-        } else {
-            response = await postAluna(Aluna.value);
-        }
-        if (!response.success) {
+        try {
+            if (Aluna.value.id) {
+                response = await putAluna(Aluna.value);
+            } else {
+                response = await postAluna(Aluna.value);
+            }
+        } catch (e) {
+            errors.value = e.errors;
             setTimeout(() => {
-                errors.value = { ...response.errors };
+                console.log(errors.value);
                 submitLoading.value = false;
             }, 500);
             return;
         }
         closeModalAddAluna();
 
-        alunas.value = await getAlunas();
+        alunas.value = (await getAlunas()).data;
+        console.log(alunas.value);
     }
 
     async function sendDeleteRequest(id) {
@@ -88,7 +90,8 @@
 
     const alunas = ref([]);
     onMounted(async () => {
-        alunas.value = await getAlunas();
+        alunas.value = (await getAlunas()).data;
+        console.log(alunas.value);
         pageLoading.value = false;
     });
 </script>
@@ -142,14 +145,6 @@
                             label="Email"
                             placeholder="Ex: email@email.com"
                             :error="errors['email']"
-                        />
-                        <Input
-                            :model="Aluna.senha"
-                            @update-value="Aluna.senha = $event"
-                            label="Senha"
-                            type="password"
-                            placeholder="Insira a Senha"
-                            :error="errors['senha']"
                         />
                     </div>
 

@@ -1,29 +1,50 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
     import Input from "@/components/form/Input.vue";
+    import router from "@/router";
+    import { useAuthStore } from "@/stores/authStore";
+    import { ref } from "vue";
+
+    const auth = useAuthStore();
+    const login = ref("admin");
+    const senha = ref("admin123");
+
+    const errors = ref([]);
+
+    async function sendRequest() {
+        try {
+            await auth.login(login.value, senha.value);
+            router.push("/");
+        } catch (error) {
+            console.log(error);
+            errors.value = error.errors;
+        }
+    }
 </script>
 
 <template>
     <div class="form-wrapper">
-        <form>
+        <form @submit.prevent="sendRequest()">
             <h1>Login</h1>
 
-            <Input label="Email" name="email" placeholder="Insira seu Email" />
-
             <Input
-                label="Senha"
-                name="password"
-                placeholder="Insira sua Senha"
+                @update-value="login = $event"
+                :model="login"
+                label="Login"
+                placeholder="Insira seu login"
+                :error="errors['login']"
             />
 
-            <Button>Entrar</Button>
+            <Input
+                @update-value="senha = $event"
+                :model="senha"
+                label="Senha"
+                placeholder="Insira sua Senha"
+                type="password"
+                :error="errors['senha']"
+            />
 
-            <p>
-                Não possui uma conta?
-                <span class="text-pink-smooth">
-                    <RouterLink to="/cadastro"> Cadastrar-se </RouterLink>
-                </span>
-            </p>
+            <Button type="submit">Entrar</Button>
         </form>
     </div>
 </template>
