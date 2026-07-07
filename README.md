@@ -48,7 +48,7 @@ Entre os recursos implementados estão:
 | Tailwind CSS | ^4.3.1 | Classes utilitárias de estilo |
 | Lucide Vue | ^1.20.0 | Ícones da interface |
 | Maska | ^3.2.0 | Máscaras de campos como CPF e telefone |
-| Node.js | ^20.19.0 ou >=22.12.0 | Ambiente de execução do frontend |
+| Bun | 1.3.13 (ambiente analisado) | Runtime JavaScript e gerenciamento de dependências do frontend |
 
 ### Banco de dados
 
@@ -174,8 +174,7 @@ Antes de iniciar, instale:
 - Git;
 - JDK 25;
 - PostgreSQL;
-- Node.js `^20.19.0` ou `>=22.12.0`;
-- npm, incluído com o Node.js.
+- Bun 1.3.13 ou versão compatível.
 
 O Maven não precisa ser instalado globalmente, pois o backend inclui o Maven Wrapper.
 
@@ -242,8 +241,8 @@ Em outro terminal:
 
 ```bash
 cd frontend
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 O frontend usa a variável `VITE_API_URL` para localizar o backend. O arquivo `frontend/.env` pode conter:
@@ -258,7 +257,7 @@ O Vite normalmente disponibiliza a aplicação em `http://localhost:5173` e info
 
 ```bash
 cd frontend
-npm run build
+bun run build
 ```
 
 Os arquivos de produção serão gerados em `frontend/dist`.
@@ -360,8 +359,13 @@ Antes de utilizar o projeto em produção, recomenda-se revisar gerenciamento de
 
 ## Autores
 
-- **Nome do aluno/integrante:** ____________________________________
-- **Nome dos demais integrantes:** _________________________________
-- **Instituição:** _________________________________________________
-- **Curso:** ______________________________________________________
+**Integrantes:**
+- MATHEUS CARDOSO
+- LUIS FELIPE
+- VITOR GABRIEL
 
+**Instituição:**
+- Instituto Federal do Paraná (IFPR) - Campus Foz do Iguaçu
+
+**Curso:**
+- Tecnologia em Análise e Desenvolvimento de Sistemas (TADS) - 3º Período
