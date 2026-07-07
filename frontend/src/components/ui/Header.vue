@@ -1,6 +1,7 @@
 <script setup lang="ts">
-    import { LogOut } from "@lucide/vue";
-    import { inject } from "vue";
+    import ProfileModal from "@/components/modal/ProfileModal.vue";
+    import { LogOut, UserRoundPen } from "@lucide/vue";
+    import { computed, inject, ref } from "vue";
     import { useRouter } from "vue-router";
     import { useAuthStore } from "@/stores/authStore";
     import UserIcon from "../icons/UserIcon.vue";
@@ -9,6 +10,10 @@
     const description = inject("headerDescription", null);
     const auth = useAuthStore();
     const router = useRouter();
+    const modalProfile = ref(false);
+    const canEditProfile = computed(() =>
+        ["ALUNA", "PROFESSORA"].includes(auth.usuario?.perfil)
+    );
 
     function logout() {
         auth.logout();
@@ -28,6 +33,17 @@
                     <UserIcon />
                     <span>{{ auth.usuario?.nome }}</span>
                 </li>
+                <li v-if="canEditProfile">
+                    <button
+                        type="button"
+                        title="Editar meus dados"
+                        aria-label="Editar meus dados"
+                        @click="modalProfile = true"
+                    >
+                        <UserRoundPen :size="19" />
+                        <span>Meus dados</span>
+                    </button>
+                </li>
                 <li>
                     <button
                         type="button"
@@ -41,6 +57,7 @@
                 </li>
             </ul>
         </nav>
+        <ProfileModal v-if="modalProfile" @close="modalProfile = false" />
     </header>
 </template>
 

@@ -1,6 +1,8 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
     import Input from "@/components/form/Input.vue";
+    import SearchInput from "@/components/form/SearchInput.vue";
+    import Textarea from "@/components/form/Textarea.vue";
     import MainLayout from "@/components/layout/MainLayout.vue";
     import Card from "@/components/ui/Card.vue";
     import Modal from "@/components/modal/Modal.vue";
@@ -8,6 +10,7 @@
         deleteTreino,
         getTreino,
         getTreinos,
+        getTreinosPorProfessora,
         postTreino,
         putTreino,
     } from "@/services/treinoService";
@@ -19,6 +22,7 @@
     import { getProfessoras } from "@/services/professoraService";
     import Errors from "@/components/form/Errors.vue";
     import { useAuthStore } from "@/stores/authStore";
+    import { filtrarPorTermo } from "@/composables/useListSearch";
 
     provide("headerTitle", "Listagem de Treinos");
 
@@ -43,6 +47,7 @@
     const modalAddTreino = ref(false);
     const modalConfirmRemoveTreino = ref(false);
     const selectedTreinoToDelete = ref(null);
+    const pesquisa = ref("");
 
     function treinoVazio() {
         return {
@@ -57,15 +62,22 @@
     const Treino = ref(treinoVazio());
     const professoraId = ref(null);
     const treinos = ref([]);
+    const treinosFiltrados = computed(() =>
+        filtrarPorTermo(treinos.value, pesquisa.value)
+    );
     const professoras = ref([]);
     onMounted(async () => {
         try {
             await carregarTreinos();
-            professoras.value = (await getProfessoras()).data;
-            if (!isAdmin.value) {
-                professoras.value = professoras.value.filter(
-                    (professora) => professora.id === auth.usuario?.professoraId
-                );
+            if (isAdmin.value) {
+                professoras.value = (await getProfessoras()).data;
+            } else {
+                professoras.value = [
+                    {
+                        id: auth.usuario?.professoraId,
+                        nome: auth.usuario?.nome,
+                    },
+                ];
                 professoraId.value = auth.usuario?.professoraId || null;
             }
         } catch (error) {
@@ -150,7 +162,9 @@
     }
 
     async function carregarTreinos() {
-        treinos.value = (await getTreinos()).data;
+        treinos.value = isAdmin.value
+            ? (await getTreinos()).data
+            : (await getTreinosPorProfessora(auth.usuario.professoraId)).data;
     }
 </script>
 
@@ -160,16 +174,21 @@
             v-if="pageLoading"
             class="absolute right-1/2 top-1/2 -translate-1/2"
         />
-        <nav class="mb-4 grid grid-cols-5 place-items-center">
+        <nav class="list-toolbar">
             <Button
                 v-if="canEdit"
                 bg="var(--color-success)"
                 color="black"
-                class="hover:scale-102"
+                class="add-button hover:scale-102"
                 @click="openModalAddTreino"
             >
                 Adicionar treino
             </Button>
+            <SearchInput
+                :model="pesquisa"
+                @update-value="pesquisa = $event"
+                placeholder="Pesquisar treinos"
+            />
         </nav>
         <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
@@ -188,10 +207,11 @@
                             placeholder="Insira o Nome do treino"
                             :error="errors['nome']"
                         />
-                        <Input
+                        <Textarea
                             :model="Treino.descricao"
                             @update-value="Treino.descricao = $event"
-                            label="Descricao"
+                            label="Descrição"
+                            placeholder="Descreva o treino"
                             :error="errors['descricao']"
                         />
                     </div>
@@ -242,7 +262,7 @@
         <section
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 place-items-center"
         >
-            <Card v-if="treinos" v-for="t in treinos" :key="t.id">
+            <Card v-for="t in treinosFiltrados" :key="t.id">
                 <template #header>
                     <h3>{{ t.nome }}</h3>
                     <p class="id">#{{ t.id }}</p>
@@ -266,13 +286,25 @@
                     <label>Professora:</label>
                     <span>{{ t.professora?.nome }}</span>
                 </div>
+                <div class="card-group flex flex-col">
+                    <label>Status:</label>
+                    <span
+                        class="font-bold"
+                        :class="{
+                            'text-success': t.status === 'ATIVO',
+                            'text-danger': t.status === 'INATIVO',
+                        }"
+                    >
+                        {{ t.status }}
+                    </span>
+                </div>
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
                         <Button
                             v-if="canEdit && canEditTreino(t)"
                             @click="prepareUpdate(t.id)"
                             variant="info"
-                            class="hover:-translate-y-1 gap-1"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
                             Editar
                             <template #icon>
@@ -283,7 +315,7 @@
                             v-if="canDelete"
                             @click="openModalConfirmRemoveTreino(t)"
                             variant="danger"
-                            class="hover:-translate-y-1 gap-1"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
                             Excluir
                             <template #icon>
@@ -306,3 +338,30 @@
         </section>
     </MainLayout>
 </template>
+
+<style scoped>
+    .list-toolbar {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .add-button {
+        max-width: 210px;
+    }
+
+    .card-action-button {
+        width: 128px;
+        min-height: 44px;
+        flex: 0 0 128px;
+    }
+
+    @media (max-width: 640px) {
+        .list-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+</style>

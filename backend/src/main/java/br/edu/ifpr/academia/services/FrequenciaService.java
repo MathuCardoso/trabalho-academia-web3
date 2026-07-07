@@ -10,9 +10,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/*
- * Service responsavel pelas regras de negocio de Frequencia.
- */
 @Service
 public class FrequenciaService {
 
@@ -30,16 +27,10 @@ public class FrequenciaService {
         this.matriculaService = matriculaService;
     }
 
-    /*
-     * Lista todas as frequencias.
-     */
     public List<Frequencia> listarTodas() {
         return frequenciaRepository.findAll();
     }
 
-    /*
-     * Busca frequencia pelo ID.
-     */
     public Frequencia buscarPorId(Long id) {
         return frequenciaRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Frequencia nao encontrada"));
@@ -53,20 +44,14 @@ public class FrequenciaService {
                 .isPresent();
     }
 
-    /*
-     * Lista frequencias de uma aluna.
-     */
     public List<Frequencia> listarPorAluna(Long alunaId) {
         return frequenciaRepository.findByAlunaId(alunaId);
     }
 
-    /*
-     * Salva frequencia.
-     *
-     * Se dataHoraEntrada vier nula, registra o horario atual.
-     */
     public Frequencia salvar(Frequencia frequencia) {
         frequencia.setAluna(buscarAlunaObrigatoria(frequencia));
+
+        matriculaService.validarAlunaPossuiMatriculaAtiva(frequencia.getAluna().getId());
 
         if (frequencia.getDataHoraEntrada() == null) {
             frequencia.setDataHoraEntrada(LocalDateTime.now());
@@ -75,22 +60,10 @@ public class FrequenciaService {
         return frequenciaRepository.save(frequencia);
     }
 
-    /*
-     * Registra check-in.
-     *
-     * Regras:
-     * - aluna precisa existir
-     * - aluna precisa ter matricula ATIVA
-     * - data/hora atual e registrada automaticamente
-     */
     public Frequencia registrarCheckin(Long alunaId) {
         Aluna aluna = alunaService.buscarPorId(alunaId);
 
-        boolean possuiMatriculaAtiva = matriculaService.alunaPossuiMatriculaAtiva(alunaId);
-
-        if (!possuiMatriculaAtiva) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Aluna nao possui matricula ativa", "aluna");
-        }
+        matriculaService.validarAlunaPossuiMatriculaAtiva(alunaId);
 
         Frequencia frequencia = new Frequencia();
         frequencia.setAluna(aluna);
@@ -99,22 +72,22 @@ public class FrequenciaService {
         return frequenciaRepository.save(frequencia);
     }
 
-    /*
-     * Atualiza frequencia.
-     */
     public Frequencia atualizar(Long id, Frequencia dadosAtualizados) {
         Frequencia frequencia = buscarPorId(id);
 
         frequencia.setAluna(buscarAlunaObrigatoria(dadosAtualizados));
 
+        matriculaService.validarAlunaPossuiMatriculaAtiva(frequencia.getAluna().getId());
+
         frequencia.setDataHoraEntrada(dadosAtualizados.getDataHoraEntrada());
+
+        if (frequencia.getDataHoraEntrada() == null) {
+            frequencia.setDataHoraEntrada(LocalDateTime.now());
+        }
 
         return frequenciaRepository.save(frequencia);
     }
 
-    /*
-     * Exclui frequencia.
-     */
     public void excluir(Long id) {
         Frequencia frequencia = buscarPorId(id);
         frequenciaRepository.delete(frequencia);

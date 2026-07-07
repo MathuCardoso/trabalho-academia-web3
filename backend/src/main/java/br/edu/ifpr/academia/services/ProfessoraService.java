@@ -1,6 +1,7 @@
 package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.dtos.ProfessoraRequest;
+import br.edu.ifpr.academia.dtos.AtualizarPerfilProfessoraRequest;
 import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
@@ -134,6 +135,33 @@ public class ProfessoraService {
         } else {
             usuarioService.inativar(professora.getUsuario().getId());
         }
+
+        return professoraRepository.save(professora);
+    }
+
+    @Transactional
+    public Professora atualizarPerfil(Long id, AtualizarPerfilProfessoraRequest dadosAtualizados) {
+        Professora professora = buscarPorId(id);
+
+        if (professoraRepository.existsByCrefAndIdNot(dadosAtualizados.getCref(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "CREF ja cadastrado", "cref");
+        }
+
+        if (professoraRepository.existsByEmailAndIdNot(dadosAtualizados.getEmail(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "E-mail ja cadastrado", "email");
+        }
+
+        if (professora.getUsuario() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da professora nao encontrado");
+        }
+
+        professora.setNome(dadosAtualizados.getNome());
+        professora.setEmail(dadosAtualizados.getEmail());
+        professora.setCref(dadosAtualizados.getCref());
+        professora.setEspecialidade(dadosAtualizados.getEspecialidade());
+
+        usuarioService.atualizarLogin(professora.getUsuario(), professora.getCref());
+        usuarioService.atualizarSenha(professora.getUsuario(), dadosAtualizados.getSenha());
 
         return professoraRepository.save(professora);
     }

@@ -16,6 +16,18 @@ export async function putAluna(fields) {
     return await api.put(`api/alunas/${fields.id}`, fields);
 }
 
+export async function putMeuPerfilAluna(id, fields) {
+    return await api.put(`api/alunas/${id}/perfil`, fields);
+}
+
+export async function ativarAluna(id) {
+    return await api.patch(`api/alunas/${id}/ativar`);
+}
+
+export async function inativarAluna(id) {
+    return await api.patch(`api/alunas/${id}/inativar`);
+}
+
 export async function deleteAluna(id) {
     return await api.remove(`api/alunas/${id}`);
 }

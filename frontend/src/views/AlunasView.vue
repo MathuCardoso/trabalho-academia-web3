@@ -1,23 +1,27 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
     import Input from "@/components/form/Input.vue";
+    import SearchInput from "@/components/form/SearchInput.vue";
     import MainLayout from "@/components/layout/MainLayout.vue";
     import Card from "@/components/ui/Card.vue";
     import Modal from "@/components/modal/Modal.vue";
     import {
+        ativarAluna,
         deleteAluna,
         getAluna,
         getAlunas,
+        inativarAluna,
         postAluna,
         putAluna,
     } from "@/services/alunaService";
-    import { Pencil, Trash2 } from "@lucide/vue";
+    import { Pencil, Trash2, UserCheck, UserX } from "@lucide/vue";
     import { computed, onMounted, provide, ref } from "vue";
     import Confirm from "@/components/modal/Confirm.vue";
     import Loading from "@/components/icons/Loading.vue";
     import Select from "@/components/form/Select.vue";
     import Errors from "@/components/form/Errors.vue";
     import { useAuthStore } from "@/stores/authStore";
+    import { filtrarPorTermo } from "@/composables/useListSearch";
 
     provide("headerTitle", "Listagem de Alunas");
 
@@ -27,10 +31,12 @@
     const pageLoading = ref(true);
     const submitLoading = ref(false);
     const deleteLoading = ref(false);
+    const statusLoadingId = ref(null);
 
     const modalAddAluna = ref(false);
     const modalConfirmRemoveAluna = ref(false);
     const selectedAlunaToDelete = ref(null);
+    const pesquisa = ref("");
 
     function alunaVazia() {
         return {
@@ -94,6 +100,24 @@
         }
     }
 
+    async function toggleStatus(aluna) {
+        statusLoadingId.value = aluna.id;
+        errors.value = {};
+
+        try {
+            if (aluna.status === "ATIVO") {
+                await inativarAluna(aluna.id);
+            } else {
+                await ativarAluna(aluna.id);
+            }
+            await carregarAlunas();
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        } finally {
+            statusLoadingId.value = null;
+        }
+    }
+
     function closeModalAddAluna() {
         modalAddAluna.value = false;
         Aluna.value = alunaVazia();
@@ -107,6 +131,9 @@
     }
 
     const alunas = ref([]);
+    const alunasFiltradas = computed(() =>
+        filtrarPorTermo(alunas.value, pesquisa.value)
+    );
     async function carregarAlunas() {
         alunas.value = (await getAlunas()).data;
     }
@@ -128,16 +155,21 @@
             v-if="pageLoading"
             class="absolute right-1/2 top-1/2 -translate-1/2"
         />
-        <nav class="mb-4 grid grid-cols-6 place-items-center">
+        <nav class="list-toolbar">
             <Button
                 v-if="canManage"
                 bg="var(--color-success)"
                 color="black"
-                class="hover:scale-102"
+                class="add-button hover:scale-102"
                 @click="modalAddAluna = true"
             >
                 Adicionar aluna
             </Button>
+            <SearchInput
+                :model="pesquisa"
+                @update-value="pesquisa = $event"
+                placeholder="Pesquisar alunas"
+            />
         </nav>
         <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
@@ -200,7 +232,7 @@
                             v-if="!Aluna.id"
                             :model="Aluna.senhaInicial"
                             @update-value="Aluna.senhaInicial = $event"
-                            label="Senha Inicial"
+                            label="Senha"
                             type="password"
                             :error="errors['senhaInicial']"
                         />
@@ -235,8 +267,18 @@
         <section
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 place-items-center"
         >
-            <Card v-if="alunas" v-for="a in alunas" :key="a.id">
+            <Card v-for="a in alunasFiltradas" :key="a.id">
                 <template #header>
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="delete-card-button"
+                        title="Excluir aluna"
+                        aria-label="Excluir aluna"
+                        @click="openModalConfirmRemoveAluna(a)"
+                    >
+                        <Trash2 :size="19" />
+                    </button>
                     <h3>{{ a.nome }}</h3>
                     <p class="id">#{{ a.id }}</p>
                 </template>
@@ -273,7 +315,7 @@
                             v-if="canManage"
                             @click="prepareUpdate(a.id)"
                             variant="info"
-                            class="hover:-translate-y-1 gap-1"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
                             Editar
                             <template #icon>
@@ -282,13 +324,30 @@
                         </Button>
                         <Button
                             v-if="canManage"
-                            @click="openModalConfirmRemoveAluna(a)"
-                            variant="danger"
-                            class="hover:-translate-y-1 gap-1"
+                            @click="toggleStatus(a)"
+                            :variant="a.status === 'ATIVO' ? 'danger' : 'success'"
+                            :disabled="statusLoadingId === a.id"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
-                            Excluir
+                            <Loading
+                                v-if="statusLoadingId === a.id"
+                                :size="20"
+                            />
+                            <template v-else>
+                                {{ a.status === "ATIVO" ? "Inativar" : "Ativar" }}
+                            </template>
                             <template #icon>
-                                <Trash2 :size="18" />
+                                <UserX
+                                    v-if="
+                                        statusLoadingId !== a.id &&
+                                        a.status === 'ATIVO'
+                                    "
+                                    :size="18"
+                                />
+                                <UserCheck
+                                    v-else-if="statusLoadingId !== a.id"
+                                    :size="18"
+                                />
                             </template>
                         </Button>
                     </div>
@@ -308,4 +367,45 @@
     </MainLayout>
 </template>
 
-<style scoped></style>
+<style scoped>
+    .list-toolbar {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .add-button {
+        max-width: 210px;
+    }
+
+    .delete-card-button {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        padding: 7px;
+        display: flex;
+        color: var(--color-danger);
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .delete-card-button:hover {
+        color: white;
+        background-color: var(--color-danger);
+    }
+
+    .card-action-button {
+        width: 128px;
+        min-height: 44px;
+        flex: 0 0 128px;
+    }
+
+    @media (max-width: 640px) {
+        .list-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+</style>

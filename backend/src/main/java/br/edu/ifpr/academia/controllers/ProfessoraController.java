@@ -1,6 +1,7 @@
 package br.edu.ifpr.academia.controllers;
 
 import br.edu.ifpr.academia.dtos.ProfessoraRequest;
+import br.edu.ifpr.academia.dtos.AtualizarPerfilProfessoraRequest;
 import br.edu.ifpr.academia.entities.Professora;
 import br.edu.ifpr.academia.services.ProfessoraService;
 import jakarta.validation.Valid;
@@ -24,13 +25,14 @@ public class ProfessoraController {
         this.professoraService = professoraService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Professora> listarTodas() {
         return professoraService.listarTodas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and @professoraService.pertenceAoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Professora> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(professoraService.buscarPorId(id));
@@ -49,6 +51,16 @@ public class ProfessoraController {
             @Valid @RequestBody Professora professora
     ) {
         return ResponseEntity.ok(professoraService.atualizar(id, professora));
+    }
+
+    @PreAuthorize("hasRole('PROFESSORA') and "
+            + "@professoraService.pertenceAoUsuario(#id, authentication.name)")
+    @PutMapping("/{id}/perfil")
+    public ResponseEntity<Professora> atualizarPerfil(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarPerfilProfessoraRequest request
+    ) {
+        return ResponseEntity.ok(professoraService.atualizarPerfil(id, request));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

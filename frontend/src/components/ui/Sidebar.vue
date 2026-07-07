@@ -15,22 +15,27 @@
         {
             name: "Alunas",
             route: "/alunas",
-            roles: ["ADMIN", "PROFESSORA"],
+            roles: ["ADMIN"],
         },
         {
             name: "Professoras",
             route: "/professoras",
-            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
+            roles: ["ADMIN"],
         },
         {
             name: "Treinos",
             route: "/treinos",
-            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
+            roles: ["ADMIN", "PROFESSORA"],
         },
         {
             name: "Matrículas",
             route: "/matriculas",
-            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
+            roles: ["ADMIN"],
+        },
+        {
+            name: "Frequência",
+            route: "/frequencias",
+            roles: ["ADMIN", "ALUNA"],
         },
     ];
 
@@ -51,6 +56,7 @@
                 <span class="text-pink-accent"> & Women </span>
             </h1>
         </div>
+
         <nav>
             <ul>
                 <RouterLink
@@ -106,7 +112,6 @@
         transition: color 0.1s ease-out;
     }
 
-    /* O truque da transição no gradiente */
     nav ul li::before {
         content: "";
         position: absolute;
@@ -131,6 +136,7 @@
     nav ul li.active {
         color: #e43e61;
     }
+
     .brand {
         display: flex;
         justify-content: center;

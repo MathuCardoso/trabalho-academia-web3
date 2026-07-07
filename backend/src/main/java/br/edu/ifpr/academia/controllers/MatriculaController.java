@@ -23,39 +23,43 @@ public class MatriculaController {
         this.matriculaService = matriculaService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Matricula> listarTodas() {
         return matriculaService.listarTodas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
-            + "(hasRole('ALUNA') and @matriculaService.pertenceAAlunaDoUsuario(#id, authentication.name))")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('ALUNA') and @matriculaService.pertenceAAlunaDoUsuario(#id, authentication.name)) or "
+            + "(hasRole('PROFESSORA') and "
+            + "@matriculaService.pertenceAProfessoraDoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Matricula> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(matriculaService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+    @PreAuthorize("hasRole('ADMIN') or "
             + "(hasRole('ALUNA') and @alunaService.pertenceAoUsuario(#alunaId, authentication.name))")
     @GetMapping("/aluna/{alunaId}")
     public List<Matricula> listarPorAluna(@PathVariable Long alunaId) {
         return matriculaService.listarPorAluna(alunaId);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@professoraService.pertenceAoUsuario(#professoraId, authentication.name))")
     @GetMapping("/professora/{professoraId}")
     public List<Matricula> listarPorProfessora(@PathVariable Long professoraId) {
         return matriculaService.listarPorProfessora(professoraId);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/vencidas")
     public List<Matricula> listarVencidas() {
         return matriculaService.listarVencidas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/a-vencer")
     public List<Matricula> listarAVencer() {
         return matriculaService.listarAVencer();

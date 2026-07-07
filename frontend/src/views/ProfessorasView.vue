@@ -1,23 +1,27 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
     import Input from "@/components/form/Input.vue";
+    import SearchInput from "@/components/form/SearchInput.vue";
     import MainLayout from "@/components/layout/MainLayout.vue";
     import Card from "@/components/ui/Card.vue";
     import Modal from "@/components/modal/Modal.vue";
     import {
+        ativarProfessora,
         deleteProfessora,
         getProfessora,
         getProfessoras,
+        inativarProfessora,
         postProfessora,
         putProfessora,
     } from "@/services/professoraService";
-    import { Pencil, Trash2 } from "@lucide/vue";
+    import { Pencil, Trash2, UserCheck, UserX } from "@lucide/vue";
     import { computed, onMounted, provide, ref } from "vue";
     import Confirm from "@/components/modal/Confirm.vue";
     import Loading from "@/components/icons/Loading.vue";
     import Select from "@/components/form/Select.vue";
     import Errors from "@/components/form/Errors.vue";
     import { useAuthStore } from "@/stores/authStore";
+    import { filtrarPorTermo } from "@/composables/useListSearch";
 
     provide("headerTitle", "Listagem de Professoras");
 
@@ -27,10 +31,12 @@
     const pageLoading = ref(true);
     const submitLoading = ref(false);
     const deleteLoading = ref(false);
+    const statusLoadingId = ref(null);
 
     const modalAddProfessora = ref(false);
     const modalConfirmRemoveProfessora = ref(false);
     const selectedProfessoraToDelete = ref(null);
+    const pesquisa = ref("");
 
     function professoraVazia() {
         return {
@@ -94,6 +100,24 @@
         }
     }
 
+    async function toggleStatus(professora) {
+        statusLoadingId.value = professora.id;
+        errors.value = {};
+
+        try {
+            if (professora.status === "ATIVO") {
+                await inativarProfessora(professora.id);
+            } else {
+                await ativarProfessora(professora.id);
+            }
+            await carregarProfessoras();
+        } catch (error) {
+            errors.value = error.errors || { geral: error.message };
+        } finally {
+            statusLoadingId.value = null;
+        }
+    }
+
     function closeModalAddProfessora() {
         modalAddProfessora.value = false;
         Professora.value = professoraVazia();
@@ -107,6 +131,9 @@
     }
 
     const professoras = ref([]);
+    const professorasFiltradas = computed(() =>
+        filtrarPorTermo(professoras.value, pesquisa.value)
+    );
     async function carregarProfessoras() {
         professoras.value = (await getProfessoras()).data;
     }
@@ -128,16 +155,21 @@
             v-if="pageLoading"
             class="absolute right-1/2 top-1/2 -translate-1/2"
         />
-        <nav class="mb-4 grid grid-cols-4 place-items-center">
+        <nav class="list-toolbar">
             <Button
                 v-if="canManage"
                 bg="var(--color-success)"
                 color="black"
-                class="hover:scale-102"
+                class="add-button hover:scale-102"
                 @click="modalAddProfessora = true"
             >
                 Adicionar professora
             </Button>
+            <SearchInput
+                :model="pesquisa"
+                @update-value="pesquisa = $event"
+                placeholder="Pesquisar professoras"
+            />
         </nav>
         <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
@@ -168,9 +200,11 @@
                     <div class="flex gap-4 mb-5">
                         <Input
                             :model="Professora.cref"
-                            @update-value="Professora.cref = $event"
+                            @update-value="Professora.cref = $event.toUpperCase()"
                             label="CREF"
                             placeholder="Insira o CREF"
+                            mask="######-L/LL"
+                            mask-tokens="L:[A-Za-z]"
                             :error="errors['cref']"
                         />
                         <Input
@@ -196,7 +230,7 @@
                         <Input
                             :model="Professora.senhaInicial"
                             @update-value="Professora.senhaInicial = $event"
-                            label="Senha inicial"
+                            label="Senha"
                             type="password"
                             placeholder="Insira a senha inicial"
                             :error="errors['senhaInicial']"
@@ -220,8 +254,18 @@
         <section
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 place-items-center"
         >
-            <Card v-if="professoras" v-for="p in professoras" :key="p.id">
+            <Card v-for="p in professorasFiltradas" :key="p.id">
                 <template #header>
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="delete-card-button"
+                        title="Excluir professora"
+                        aria-label="Excluir professora"
+                        @click="openModalConfirmRemoveProfessora(p)"
+                    >
+                        <Trash2 :size="19" />
+                    </button>
                     <h3>{{ p.nome }}</h3>
                     <p class="id">#{{ p.id }}</p>
                 </template>
@@ -254,7 +298,7 @@
                             v-if="canManage"
                             @click="prepareUpdate(p.id)"
                             variant="info"
-                            class="hover:-translate-y-1 gap-1"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
                             Editar
                             <template #icon>
@@ -263,13 +307,30 @@
                         </Button>
                         <Button
                             v-if="canManage"
-                            @click="openModalConfirmRemoveProfessora(p)"
-                            variant="danger"
-                            class="hover:-translate-y-1 gap-1"
+                            @click="toggleStatus(p)"
+                            :variant="p.status === 'ATIVO' ? 'danger' : 'success'"
+                            :disabled="statusLoadingId === p.id"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
-                            Excluir
+                            <Loading
+                                v-if="statusLoadingId === p.id"
+                                :size="20"
+                            />
+                            <template v-else>
+                                {{ p.status === "ATIVO" ? "Inativar" : "Ativar" }}
+                            </template>
                             <template #icon>
-                                <Trash2 :size="18" />
+                                <UserX
+                                    v-if="
+                                        statusLoadingId !== p.id &&
+                                        p.status === 'ATIVO'
+                                    "
+                                    :size="18"
+                                />
+                                <UserCheck
+                                    v-else-if="statusLoadingId !== p.id"
+                                    :size="18"
+                                />
                             </template>
                         </Button>
                     </div>
@@ -289,4 +350,45 @@
     </MainLayout>
 </template>
 
-<style scoped></style>
+<style scoped>
+    .list-toolbar {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .add-button {
+        max-width: 220px;
+    }
+
+    .delete-card-button {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        padding: 7px;
+        display: flex;
+        color: var(--color-danger);
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .delete-card-button:hover {
+        color: white;
+        background-color: var(--color-danger);
+    }
+
+    .card-action-button {
+        width: 128px;
+        min-height: 44px;
+        flex: 0 0 128px;
+    }
+
+    @media (max-width: 640px) {
+        .list-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+</style>

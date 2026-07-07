@@ -12,6 +12,10 @@ export async function getMatriculasPorAluna(alunaId) {
     return await api.get(`api/matriculas/aluna/${alunaId}`);
 }
 
+export async function getMatriculasPorProfessora(professoraId) {
+    return await api.get(`api/matriculas/professora/${professoraId}`);
+}
+
 export async function postMatricula(fields) {
     return await api.post("api/matriculas", fields);
 }

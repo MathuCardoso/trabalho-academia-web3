@@ -157,6 +157,22 @@ export function useApi() {
         };
     }
 
+    async function patch(uri, fields) {
+        const response = await request(uri, {
+            method: "PATCH",
+            ...(fields ? { body: JSON.stringify(fields) } : {}),
+        });
+        if (!response.ok)
+            throw errorResponse(response, "Erro ao alterar registro");
+
+        return {
+            success: true,
+            message: "Registro alterado com sucesso",
+            data: response.data,
+            status: response.status,
+        };
+    }
+
     async function remove(uri) {
         const response = await request(uri, { method: "DELETE" });
         if (!response.ok)
@@ -173,6 +189,7 @@ export function useApi() {
         get,
         post,
         put,
+        patch,
         remove,
     };
 }

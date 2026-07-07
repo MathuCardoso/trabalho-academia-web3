@@ -1,146 +1,310 @@
 <script setup>
+    import Button from "@/components/form/Button.vue";
     import Errors from "@/components/form/Errors.vue";
     import Loading from "@/components/icons/Loading.vue";
     import MainLayout from "@/components/layout/MainLayout.vue";
     import { getAlunas } from "@/services/alunaService";
-    import { getMatriculas } from "@/services/matriculaService";
+    import {
+        getFrequencias,
+        getFrequenciasPorAluna,
+        registrarCheckin,
+    } from "@/services/frequenciaService";
+    import {
+        getMatriculas,
+        getMatriculasPorAluna,
+        getMatriculasPorProfessora,
+    } from "@/services/matriculaService";
     import { getProfessoras } from "@/services/professoraService";
-    import { getTreinos } from "@/services/treinoService";
+    import {
+        getTreinos,
+        getTreinosPorProfessora,
+    } from "@/services/treinoService";
     import { useAuthStore } from "@/stores/authStore";
     import {
+        Activity,
         BadgeCheck,
         CalendarClock,
         CircleAlert,
         ClipboardCheck,
         Dumbbell,
+        UserRoundCheck,
         UsersRound,
     } from "@lucide/vue";
     import { computed, onMounted, provide, ref } from "vue";
+    import { RouterLink } from "vue-router";
 
     const auth = useAuthStore();
     const isAdmin = computed(() => auth.usuario?.perfil === "ADMIN");
-    const loading = ref(false);
+    const isAluna = computed(() => auth.usuario?.perfil === "ALUNA");
+    const isProfessora = computed(() => auth.usuario?.perfil === "PROFESSORA");
+    const loading = ref(true);
+    const checkinLoading = ref(false);
     const error = ref("");
+    const successMessage = ref("");
 
     const dados = ref({
         alunas: [],
         professoras: [],
         treinos: [],
         matriculas: [],
+        frequencias: [],
     });
 
     provide("headerTitle", "Olá, " + auth.usuario.nome);
     provide("headerDescription", "Bem-vindo ao sistema de gestão de academia");
 
-    const cards = computed(() => {
-        const alunasAtivas = dados.value.alunas.filter(
-            (aluna) => aluna.status === "ATIVO"
-        ).length;
-        const professorasAtivas = dados.value.professoras.filter(
-            (professora) => professora.status === "ATIVO"
-        ).length;
-        const treinosAtivos = dados.value.treinos.filter(
-            (treino) => treino.status === "ATIVO"
-        ).length;
-        const matriculasAtivas = dados.value.matriculas.filter(
-            (matricula) => matricula.status === "ATIVA"
-        ).length;
+    const matriculaAtual = computed(() =>
+        dados.value.matriculas.find((matricula) => matricula.status === "ATIVA")
+    );
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
+    const cards = computed(() => {
+        if (isAluna.value) return cardsDaAluna();
+        if (isProfessora.value) return cardsDaProfessora();
+        return cardsDoAdmin();
+    });
+
+    function cardsDoAdmin() {
+        const hoje = inicioDoDia(new Date());
         const limite = new Date(hoje);
         limite.setDate(limite.getDate() + 7);
 
-        const matriculasVencidas = dados.value.matriculas.filter(
-            (matricula) =>
-                matricula.status === "VENCIDA" ||
-                (matricula.status === "ATIVA" &&
-                    dataDaMatricula(matricula) < hoje)
-        ).length;
-        const matriculasAVencer = dados.value.matriculas.filter((matricula) => {
-            const vencimento = dataDaMatricula(matricula);
-            return (
-                matricula.status === "ATIVA" &&
-                vencimento >= hoje &&
-                vencimento <= limite
-            );
-        }).length;
+        return [
+            card(
+                "Alunas cadastradas",
+                dados.value.alunas.length,
+                `${contarStatus(dados.value.alunas, "ATIVO")} ativas`,
+                UsersRound,
+                "pink",
+                "/alunas"
+            ),
+            card(
+                "Professoras",
+                dados.value.professoras.length,
+                `${contarStatus(dados.value.professoras, "ATIVO")} ativas`,
+                Dumbbell,
+                "cyan",
+                "/professoras"
+            ),
+            card(
+                "Treinos",
+                dados.value.treinos.length,
+                `${contarStatus(dados.value.treinos, "ATIVO")} ativos`,
+                ClipboardCheck,
+                "green",
+                "/treinos"
+            ),
+            card(
+                "Matrículas",
+                dados.value.matriculas.length,
+                `${contarStatus(dados.value.matriculas, "ATIVA")} ativas`,
+                BadgeCheck,
+                "blue",
+                "/matriculas"
+            ),
+            card(
+                "Matrículas vencidas",
+                dados.value.matriculas.filter(
+                    (matricula) => matricula.status === "VENCIDA"
+                ).length,
+                "Requerem atenção",
+                CircleAlert,
+                "red",
+                "/matriculas"
+            ),
+            card(
+                "Vencem em 7 dias",
+                dados.value.matriculas.filter((matricula) => {
+                    const vencimento = dataLocal(matricula.dataVencimento);
+                    return (
+                        matricula.status === "ATIVA" &&
+                        vencimento >= hoje &&
+                        vencimento <= limite
+                    );
+                }).length,
+                "Matrículas ativas",
+                CalendarClock,
+                "yellow",
+                "/matriculas"
+            ),
+        ];
+    }
+
+    function cardsDaAluna() {
+        const matricula = matriculaAtual.value;
+        const ultimaFrequencia = dados.value.frequencias.at(-1);
 
         return [
-            {
-                titulo: "Alunas cadastradas",
-                valor: dados.value.alunas.length,
-                detalhe: `${alunasAtivas} ativas`,
-                icone: UsersRound,
-                destino: "/alunas",
-                cor: "pink",
-            },
-            {
-                titulo: "Professoras",
-                valor: dados.value.professoras.length,
-                detalhe: `${professorasAtivas} ativas`,
-                icone: Dumbbell,
-                destino: "/professoras",
-                cor: "cyan",
-            },
-            {
-                titulo: "Treinos",
-                valor: dados.value.treinos.length,
-                detalhe: `${treinosAtivos} ativos`,
-                icone: ClipboardCheck,
-                destino: "/treinos",
-                cor: "green",
-            },
-            {
-                titulo: "Matrículas",
-                valor: dados.value.matriculas.length,
-                detalhe: `${matriculasAtivas} ativas`,
-                icone: BadgeCheck,
-                destino: "/matriculas",
-                cor: "blue",
-            },
-            {
-                titulo: "Matrículas vencidas",
-                valor: matriculasVencidas,
-                detalhe: "Requerem atenção",
-                icone: CircleAlert,
-                destino: "/matriculas",
-                cor: "red",
-            },
-            {
-                titulo: "Vencem em 7 dias",
-                valor: matriculasAVencer,
-                detalhe: "Matrículas ativas",
-                icone: CalendarClock,
-                destino: "/matriculas",
-                cor: "yellow",
-            },
+            card(
+                "Matrícula atual",
+                matricula?.status || "Sem matrícula",
+                matricula?.treino?.nome || "Nenhum treino vinculado",
+                BadgeCheck,
+                "pink"
+            ),
+            card(
+                "Vencimento",
+                formatarData(matricula?.dataVencimento),
+                matricula ? "Matrícula ativa" : "Sem vencimento",
+                CalendarClock,
+                "yellow"
+            ),
+            card(
+                "Treino atual",
+                matricula?.treino?.nome || "Não definido",
+                detalhesDoTreino(matricula?.treino),
+                Dumbbell,
+                "cyan",
+                null,
+                true
+            ),
+            card(
+                "Check-ins",
+                dados.value.frequencias.length,
+                ultimaFrequencia
+                    ? `Último em ${formatarDataHora(ultimaFrequencia.dataHoraEntrada)}`
+                    : "Nenhuma frequência registrada",
+                Activity,
+                "green"
+            ),
         ];
-    });
+    }
 
-    function dataDaMatricula(matricula) {
-        return new Date(`${matricula.dataVencimento}T00:00:00`);
+    function cardsDaProfessora() {
+        const alunasVinculadas = new Set(
+            dados.value.matriculas
+                .map((matricula) => matricula.aluna?.id)
+                .filter(Boolean)
+        );
+        const treinosAtivos = contarStatus(dados.value.treinos, "ATIVO");
+        const matriculasAtivas = contarStatus(
+            dados.value.matriculas,
+            "ATIVA"
+        );
+
+        return [
+            card(
+                "Meus treinos",
+                dados.value.treinos.length,
+                `${treinosAtivos} ativos`,
+                ClipboardCheck,
+                "pink",
+                "/treinos"
+            ),
+            card(
+                "Alunas vinculadas",
+                alunasVinculadas.size,
+                "Nos seus treinos",
+                UsersRound,
+                "cyan"
+            ),
+            card(
+                "Matrículas ativas",
+                matriculasAtivas,
+                `${dados.value.matriculas.length} no total`,
+                UserRoundCheck,
+                "green"
+            ),
+            card(
+                "Treinos inativos",
+                dados.value.treinos.length - treinosAtivos,
+                "Disponíveis para revisão",
+                CircleAlert,
+                "yellow",
+                "/treinos"
+            ),
+        ];
+    }
+
+    function card(titulo, valor, detalhe, icone, cor, destino = null, compact = false) {
+        return { titulo, valor, detalhe, icone, cor, destino, compact };
+    }
+
+    function contarStatus(registros, status) {
+        return registros.filter((registro) => registro.status === status).length;
+    }
+
+    function inicioDoDia(data) {
+        data.setHours(0, 0, 0, 0);
+        return data;
+    }
+
+    function dataLocal(data) {
+        return data ? new Date(`${data}T00:00:00`) : new Date(0);
+    }
+
+    function formatarData(data) {
+        if (!data) return "Não disponível";
+        return new Intl.DateTimeFormat("pt-BR").format(dataLocal(data));
+    }
+
+    function formatarDataHora(data) {
+        if (!data) return "-";
+        return new Intl.DateTimeFormat("pt-BR", {
+            dateStyle: "short",
+            timeStyle: "short",
+        }).format(new Date(data));
+    }
+
+    function detalhesDoTreino(treino) {
+        if (!treino) return "Nenhum treino vinculado";
+
+        const nivel = treino.nivel || "Nível não informado";
+        const descricao = treino.descricao || "Descrição não informada";
+        return `${nivel}. ${descricao}`;
+    }
+
+    async function registrarMinhaFrequencia() {
+        checkinLoading.value = true;
+        error.value = "";
+        successMessage.value = "";
+
+        try {
+            await registrarCheckin(auth.usuario.alunaId);
+            successMessage.value = "Frequência registrada com sucesso.";
+            dados.value.frequencias = (
+                await getFrequenciasPorAluna(auth.usuario.alunaId)
+            ).data;
+        } catch (requestError) {
+            error.value =
+                requestError.errors?.geral || requestError.message;
+        } finally {
+            checkinLoading.value = false;
+        }
     }
 
     onMounted(async () => {
-        if (!isAdmin.value) return;
-
-        loading.value = true;
         try {
-            const [alunas, professoras, treinos, matriculas] =
-                await Promise.all([
-                    getAlunas(),
-                    getProfessoras(),
-                    getTreinos(),
-                    getMatriculas(),
+            if (isAdmin.value) {
+                const [alunas, professoras, treinos, matriculas, frequencias] =
+                    await Promise.all([
+                        getAlunas(),
+                        getProfessoras(),
+                        getTreinos(),
+                        getMatriculas(),
+                        getFrequencias(),
+                    ]);
+                dados.value = {
+                    alunas: alunas.data,
+                    professoras: professoras.data,
+                    treinos: treinos.data,
+                    matriculas: matriculas.data,
+                    frequencias: frequencias.data,
+                };
+            } else if (isAluna.value) {
+                const [matriculas, frequencias] = await Promise.all([
+                    getMatriculasPorAluna(auth.usuario.alunaId),
+                    getFrequenciasPorAluna(auth.usuario.alunaId),
                 ]);
-
-            dados.value = {
-                alunas: alunas.data,
-                professoras: professoras.data,
-                treinos: treinos.data,
-                matriculas: matriculas.data,
-            };
+                dados.value.matriculas = matriculas.data;
+                dados.value.frequencias = frequencias.data;
+            } else {
+                const [treinos, matriculas] = await Promise.all([
+                    getTreinosPorProfessora(auth.usuario.professoraId),
+                    getMatriculasPorProfessora(auth.usuario.professoraId),
+                ]);
+                dados.value.treinos = treinos.data;
+                dados.value.matriculas = matriculas.data;
+            }
         } catch (requestError) {
             error.value =
                 requestError.errors?.geral || requestError.message;
@@ -152,19 +316,33 @@
 
 <template>
     <MainLayout>
-        <section v-if="isAdmin" aria-labelledby="dashboard-title">
+        <section aria-labelledby="dashboard-title">
             <div class="dashboard-heading">
                 <h2 id="dashboard-title">Visão geral</h2>
+                <Button
+                    v-if="isAluna"
+                    variant="success"
+                    class="checkin-button"
+                    :disabled="checkinLoading"
+                    @click="registrarMinhaFrequencia"
+                >
+                    <Loading v-if="checkinLoading" :size="21" />
+                    <template v-else>Registrar frequência</template>
+                </Button>
             </div>
 
+            <Errors v-if="error" :error="error" />
+            <p v-if="successMessage" class="success-message">
+                {{ successMessage }}
+            </p>
             <Loading v-if="loading" class="dashboard-loading" />
-            <Errors v-else-if="error" :error="error" />
 
             <div v-else class="stats-grid">
-                <RouterLink
+                <component
+                    :is="card.destino ? RouterLink : 'article'"
                     v-for="card in cards"
                     :key="card.titulo"
-                    :to="card.destino"
+                    v-bind="card.destino ? { to: card.destino } : {}"
                     class="stat-card"
                     :class="`stat-card--${card.cor}`"
                 >
@@ -172,9 +350,11 @@
                         <component :is="card.icone" :size="22" />
                         <span>{{ card.titulo }}</span>
                     </div>
-                    <strong>{{ card.valor }}</strong>
+                    <strong :class="{ compact: card.compact }">
+                        {{ card.valor }}
+                    </strong>
                     <span class="stat-card__detail">{{ card.detalhe }}</span>
-                </RouterLink>
+                </component>
             </div>
         </section>
     </MainLayout>
@@ -183,11 +363,27 @@
 <style scoped>
     .dashboard-heading {
         margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
     }
 
     .dashboard-heading h2 {
         font-size: 1.35rem;
         font-weight: 700;
+    }
+
+    .checkin-button {
+        width: 220px;
+        min-height: 44px;
+        flex: 0 0 220px;
+    }
+
+    .success-message {
+        margin-bottom: 16px;
+        color: var(--color-success);
+        font-weight: 600;
     }
 
     .dashboard-loading {
@@ -230,43 +426,32 @@
         font-weight: 600;
     }
 
-    .stat-card__header span {
+    .stat-card__header span,
+    .stat-card strong {
         overflow-wrap: anywhere;
     }
 
     .stat-card strong {
         font-size: 2.25rem;
-        line-height: 1;
+        line-height: 1.1;
+    }
+
+    .stat-card strong.compact {
+        font-size: 1.35rem;
     }
 
     .stat-card__detail {
         color: #b6bac5;
         font-size: 0.9rem;
+        line-height: 1.45;
     }
 
-    .stat-card--pink {
-        --card-accent: var(--color-pink-accent);
-    }
-
-    .stat-card--cyan {
-        --card-accent: var(--color-cyan-accent);
-    }
-
-    .stat-card--green {
-        --card-accent: #4ade80;
-    }
-
-    .stat-card--blue {
-        --card-accent: #60a5fa;
-    }
-
-    .stat-card--red {
-        --card-accent: #f87171;
-    }
-
-    .stat-card--yellow {
-        --card-accent: #facc15;
-    }
+    .stat-card--pink { --card-accent: var(--color-pink-accent); }
+    .stat-card--cyan { --card-accent: var(--color-cyan-accent); }
+    .stat-card--green { --card-accent: #4ade80; }
+    .stat-card--blue { --card-accent: #60a5fa; }
+    .stat-card--red { --card-accent: #f87171; }
+    .stat-card--yellow { --card-accent: #facc15; }
 
     @media (max-width: 1024px) {
         .stats-grid {
@@ -275,6 +460,16 @@
     }
 
     @media (max-width: 640px) {
+        .dashboard-heading {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .checkin-button {
+            width: 100%;
+            flex-basis: 44px;
+        }
+
         .stats-grid {
             grid-template-columns: 1fr;
         }

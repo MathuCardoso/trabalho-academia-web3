@@ -1,6 +1,7 @@
 <script setup>
     import Button from "@/components/form/Button.vue";
     import Input from "@/components/form/Input.vue";
+    import SearchInput from "@/components/form/SearchInput.vue";
     import MainLayout from "@/components/layout/MainLayout.vue";
     import Card from "@/components/ui/Card.vue";
     import Modal from "@/components/modal/Modal.vue";
@@ -21,6 +22,7 @@
     import { getTreinos } from "@/services/treinoService";
     import Errors from "@/components/form/Errors.vue";
     import { useAuthStore } from "@/stores/authStore";
+    import { filtrarPorTermo } from "@/composables/useListSearch";
     provide("headerTitle", "Listagem de Matrículas");
 
     const auth = useAuthStore();
@@ -33,6 +35,7 @@
     const modalAddMatricula = ref(false);
     const modalConfirmRemoveMatricula = ref(false);
     const selectedMatriculaToDelete = ref(null);
+    const pesquisa = ref("");
 
     function matriculaVazia() {
         return {
@@ -50,6 +53,9 @@
     const treinoId = ref(null);
 
     const matriculas = ref([]);
+    const matriculasFiltradas = computed(() =>
+        filtrarPorTermo(matriculas.value, pesquisa.value)
+    );
     const alunas = ref([]);
     const treinos = ref([]);
     onMounted(async () => {
@@ -154,16 +160,21 @@
             v-if="pageLoading"
             class="absolute right-1/2 top-1/2 -translate-1/2"
         />
-        <nav class="mb-4 grid grid-cols-5 place-items-center">
+        <nav class="list-toolbar">
             <Button
                 v-if="canManage"
                 bg="var(--color-success)"
                 color="black"
-                class="hover:scale-102"
+                class="add-button hover:scale-102"
                 @click="modalAddMatricula = true"
             >
                 Adicionar matrícula
             </Button>
+            <SearchInput
+                :model="pesquisa"
+                @update-value="pesquisa = $event"
+                placeholder="Pesquisar matrículas"
+            />
         </nav>
         <Errors :error="errors['geral']" />
         <Transition name="modal" mode="out-in">
@@ -252,7 +263,7 @@
         <section
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 place-items-center"
         >
-            <Card v-if="matriculas" v-for="m in matriculas" :key="m.id">
+            <Card v-for="m in matriculasFiltradas" :key="m.id">
                 <template #header>
                     <h3>{{ m.aluna?.nome }}</h3>
                     <p class="id">#{{ m.id }}</p>
@@ -271,7 +282,17 @@
                 </div>
                 <div class="card-group flex flex-col">
                     <label>Status:</label>
-                    <span>{{ m.status }}</span>
+                    <span
+                        class="font-bold"
+                        :class="{
+                            'text-success': m.status === 'ATIVA',
+                            'text-danger': ['VENCIDA', 'CANCELADA'].includes(
+                                m.status
+                            ),
+                        }"
+                    >
+                        {{ m.status }}
+                    </span>
                 </div>
                 <template #footer>
                     <div class="buttons mt-2 flex gap-3">
@@ -279,7 +300,7 @@
                             v-if="canManage"
                             @click="prepareUpdate(m.id)"
                             variant="info"
-                            class="hover:-translate-y-1 gap-1"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
                             Editar
                             <template #icon>
@@ -290,7 +311,7 @@
                             v-if="canManage"
                             @click="openModalConfirmRemoveMatricula(m)"
                             variant="danger"
-                            class="hover:-translate-y-1 gap-1"
+                            class="card-action-button hover:-translate-y-1 gap-1"
                         >
                             Excluir
                             <template #icon>
@@ -314,4 +335,29 @@
     </MainLayout>
 </template>
 
-<style scoped></style>
+<style scoped>
+    .list-toolbar {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .add-button {
+        max-width: 230px;
+    }
+
+    .card-action-button {
+        width: 128px;
+        min-height: 44px;
+        flex: 0 0 128px;
+    }
+
+    @media (max-width: 640px) {
+        .list-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+</style>

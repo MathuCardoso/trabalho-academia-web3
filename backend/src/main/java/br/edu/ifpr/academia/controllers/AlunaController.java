@@ -1,6 +1,7 @@
 package br.edu.ifpr.academia.controllers;
 
 import br.edu.ifpr.academia.dtos.AlunaRequest;
+import br.edu.ifpr.academia.dtos.AtualizarPerfilAlunaRequest;
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.services.AlunaService;
 import jakarta.validation.Valid;
@@ -24,13 +25,13 @@ public class AlunaController {
         this.alunaService = alunaService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Aluna> listarTodas() {
         return alunaService.listarTodas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+    @PreAuthorize("hasRole('ADMIN') or "
             + "(hasRole('ALUNA') and @alunaService.pertenceAoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Aluna> buscarPorId(@PathVariable Long id) {
@@ -50,6 +51,15 @@ public class AlunaController {
             @Valid @RequestBody Aluna aluna
     ) {
         return ResponseEntity.ok(alunaService.atualizar(id, aluna));
+    }
+
+    @PreAuthorize("hasRole('ALUNA') and @alunaService.pertenceAoUsuario(#id, authentication.name)")
+    @PutMapping("/{id}/perfil")
+    public ResponseEntity<Aluna> atualizarPerfil(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarPerfilAlunaRequest request
+    ) {
+        return ResponseEntity.ok(alunaService.atualizarPerfil(id, request));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

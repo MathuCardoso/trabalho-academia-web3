@@ -1,6 +1,7 @@
 package br.edu.ifpr.academia.services;
 
 import br.edu.ifpr.academia.dtos.AlunaRequest;
+import br.edu.ifpr.academia.dtos.AtualizarPerfilAlunaRequest;
 import br.edu.ifpr.academia.entities.Aluna;
 import br.edu.ifpr.academia.entities.Usuario;
 import br.edu.ifpr.academia.enums.StatusCadastro;
@@ -136,6 +137,34 @@ public class AlunaService {
         } else {
             usuarioService.inativar(aluna.getUsuario().getId());
         }
+
+        return alunaRepository.save(aluna);
+    }
+
+    @Transactional
+    public Aluna atualizarPerfil(Long id, AtualizarPerfilAlunaRequest dadosAtualizados) {
+        Aluna aluna = buscarPorId(id);
+
+        if (alunaRepository.existsByCpfAndIdNot(dadosAtualizados.getCpf(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "CPF ja cadastrado", "cpf");
+        }
+
+        if (alunaRepository.existsByEmailAndIdNot(dadosAtualizados.getEmail(), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "E-mail ja cadastrado", "email");
+        }
+
+        if (aluna.getUsuario() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario da aluna nao encontrado");
+        }
+
+        aluna.setNome(dadosAtualizados.getNome());
+        aluna.setEmail(dadosAtualizados.getEmail());
+        aluna.setTelefone(dadosAtualizados.getTelefone());
+        aluna.setCpf(dadosAtualizados.getCpf());
+        aluna.setDataNascimento(dadosAtualizados.getDataNascimento());
+
+        usuarioService.atualizarLogin(aluna.getUsuario(), aluna.getCpf());
+        usuarioService.atualizarSenha(aluna.getUsuario(), dadosAtualizados.getSenha());
 
         return alunaRepository.save(aluna);
     }

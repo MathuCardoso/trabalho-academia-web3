@@ -23,20 +23,20 @@ public class FrequenciaController {
         this.frequenciaService = frequenciaService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Frequencia> listarTodas() {
         return frequenciaService.listarTodas();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+    @PreAuthorize("hasRole('ADMIN') or "
             + "(hasRole('ALUNA') and @frequenciaService.pertenceAAlunaDoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Frequencia> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(frequenciaService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA') or "
+    @PreAuthorize("hasRole('ADMIN') or "
             + "(hasRole('ALUNA') and @alunaService.pertenceAoUsuario(#alunaId, authentication.name))")
     @GetMapping("/aluna/{alunaId}")
     public List<Frequencia> listarPorAluna(@PathVariable Long alunaId) {

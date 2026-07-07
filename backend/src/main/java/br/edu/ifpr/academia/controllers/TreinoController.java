@@ -23,19 +23,23 @@ public class TreinoController {
         this.treinoService = treinoService;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Treino> listarTodos() {
         return treinoService.listarTodos();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA', 'ALUNA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@treinoService.pertenceAProfessoraDoUsuario(#id, authentication.name))")
     @GetMapping("/{id}")
     public ResponseEntity<Treino> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(treinoService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSORA')")
+    @PreAuthorize("hasRole('ADMIN') or "
+            + "(hasRole('PROFESSORA') and "
+            + "@professoraService.pertenceAoUsuario(#professoraId, authentication.name))")
     @GetMapping("/professora/{professoraId}")
     public List<Treino> listarPorProfessora(@PathVariable Long professoraId) {
         return treinoService.listarPorProfessora(professoraId);

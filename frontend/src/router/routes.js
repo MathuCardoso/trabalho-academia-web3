@@ -4,6 +4,7 @@ import HomeView from "@/views/HomeView.vue";
 import MatriculasView from "@/views/MatriculasView.vue";
 import ProfessorasView from "@/views/ProfessorasView.vue";
 import TreinosView from "@/views/TreinosView.vue";
+import FrequenciasView from "@/views/FrequenciasView.vue";
 
 export default [
     {
@@ -30,7 +31,7 @@ export default [
         meta: {
             title: "Alunas",
             requiresAuth: true,
-            roles: ["ADMIN", "PROFESSORA"],
+            roles: ["ADMIN"],
         },
     },
     {
@@ -40,7 +41,7 @@ export default [
         meta: {
             title: "Professoras",
             requiresAuth: true,
-            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
+            roles: ["ADMIN"],
         },
     },
     {
@@ -50,7 +51,7 @@ export default [
         meta: {
             title: "Treinos",
             requiresAuth: true,
-            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
+            roles: ["ADMIN", "PROFESSORA"],
         },
     },
     {
@@ -60,7 +61,17 @@ export default [
         meta: {
             title: "Matrículas",
             requiresAuth: true,
-            roles: ["ADMIN", "PROFESSORA", "ALUNA"],
+            roles: ["ADMIN"],
+        },
+    },
+    {
+        path: "/frequencias",
+        name: "frequenciasList",
+        component: FrequenciasView,
+        meta: {
+            title: "Frequência",
+            requiresAuth: true,
+            roles: ["ADMIN", "ALUNA"],
         },
     },
 ];

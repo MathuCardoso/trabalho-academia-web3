@@ -171,6 +171,19 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
+    public Usuario atualizarSenha(Usuario usuario, String novaSenha) {
+        if (usuario == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuario vinculado nao encontrado");
+        }
+
+        if (novaSenha == null || novaSenha.isBlank()) {
+            return usuario;
+        }
+
+        usuario.setSenha(passwordEncoder.encode(novaSenha));
+        return usuarioRepository.save(usuario);
+    }
+
     /*
      * Ativa um usuario pelo ID do proprio Usuario.
      */

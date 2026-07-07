@@ -1,18 +1,15 @@
 package br.edu.ifpr.academia.dtos;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.br.CPF;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
-import br.edu.ifpr.academia.enums.StatusCadastro;
-
 import java.time.LocalDate;
 
-public class AlunaRequest {
+public class AtualizarPerfilAlunaRequest {
 
     @NotBlank(message = "O nome e obrigatorio")
     private String nome;
@@ -25,7 +22,7 @@ public class AlunaRequest {
     private String telefone;
 
     @NotBlank(message = "O CPF e obrigatorio")
-    @Size(min = 14, max = 14, message = "O CPF deve conter 14 caracteres.")
+    @Size(min = 14, max = 14, message = "O CPF deve conter 14 caracteres")
     @CPF(message = "CPF invalido")
     private String cpf;
 
@@ -33,11 +30,8 @@ public class AlunaRequest {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dataNascimento;
 
-    @NotBlank(message = "A senha e obrigatoria")
-    private String senhaInicial;
-
-    @NotNull(message = "O status e obrigatorio")
-    private StatusCadastro status = StatusCadastro.ATIVO;
+    @Size(min = 6, message = "A senha deve conter pelo menos 6 caracteres")
+    private String senha;
 
     public String getNome() {
         return nome;
@@ -54,7 +48,7 @@ public class AlunaRequest {
     public void setEmail(String email) {
         this.email = email;
     }
-    
+
     public String getTelefone() {
         return telefone;
     }
@@ -79,19 +73,11 @@ public class AlunaRequest {
         this.dataNascimento = dataNascimento;
     }
 
-    public String getSenhaInicial() {
-        return senhaInicial;
+    public String getSenha() {
+        return senha;
     }
 
-    public void setSenhaInicial(String senhaInicial) {
-        this.senhaInicial = senhaInicial;
-    }
-
-    public StatusCadastro getStatus() {
-        return status;
-    }
-
-    public void setStatus(StatusCadastro status) {
-        this.status = status;
+    public void setSenha(String senha) {
+        this.senha = senha;
     }
 }

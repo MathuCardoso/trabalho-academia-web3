@@ -8,6 +8,10 @@ export async function getTreinos() {
     return await api.get("api/treinos");
 }
 
+export async function getTreinosPorProfessora(professoraId) {
+    return await api.get(`api/treinos/professora/${professoraId}`);
+}
+
 export async function postTreino(fields) {
     return await api.post("api/treinos", fields);
 }
