@@ -43,9 +43,9 @@
         flex-direction: column;
         background: linear-gradient(
             120deg,
-            rgba(0, 0, 0, 0.404),
-            rgba(0, 0, 0, 0.74),
-            rgba(0, 0, 0, 0.404)
+            rgba(0, 0, 0, 0.504),
+            rgba(0, 0, 0, 0.84),
+            rgba(0, 0, 0, 0.504)
         );
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         border-radius: 20px;

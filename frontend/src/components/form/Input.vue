@@ -17,7 +17,7 @@
             type: String,
             default: "100%",
         },
-        mask: String,
+        mask: String | Array,
         maskTokens: String,
         error: String,
     });
@@ -50,7 +50,6 @@
                 type="button"
                 class="password-toggle"
                 :title="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
-                :aria-label="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
                 @click="mostrarSenha = !mostrarSenha"
             >
                 <EyeOff v-if="mostrarSenha" :size="19" />

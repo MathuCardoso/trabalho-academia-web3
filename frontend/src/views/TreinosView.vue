@@ -299,7 +299,7 @@
                     </span>
                 </div>
                 <template #footer>
-                    <div class="buttons mt-2 flex gap-3">
+                    <div class="buttons mt-2 flex justify-center gap-3">
                         <Button
                             v-if="canEdit && canEditTreino(t)"
                             @click="prepareUpdate(t.id)"
@@ -356,12 +356,5 @@
         width: 128px;
         min-height: 44px;
         flex: 0 0 128px;
-    }
-
-    @media (max-width: 640px) {
-        .list-toolbar {
-            align-items: stretch;
-            flex-direction: column;
-        }
     }
 </style>

@@ -9,8 +9,8 @@
     import { Dumbbell } from "@lucide/vue";
 
     const auth = useAuthStore();
-    const login = ref("admin");
-    const senha = ref("admin123");
+    const login = ref("");
+    const senha = ref("");
 
     const errors = ref({});
     const loading = ref(false);
@@ -49,10 +49,17 @@
                 <Errors :error="errors['geral']" />
 
                 <Input
-                    @update-value="login = $event"
+                    @update-value="
+                        login =
+                            $event.includes('-') && $event.includes('/')
+                                ? $event.toUpperCase()
+                                : $event
+                    "
                     :model="login"
                     label="Login"
                     placeholder="Insira seu login"
+                    mask="['######-L/LL', '###.###.###-##', 'LLLLLL']"
+                    mask-tokens="L:[A-Za-z]"
                     :error="errors['login']"
                 />
 

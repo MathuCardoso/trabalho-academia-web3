@@ -12,10 +12,10 @@ import jakarta.validation.constraints.NotBlank;
  */
 public class LoginRequest {
 
-    @NotBlank(message = "O login e obrigatorio")
+    @NotBlank(message = "O login é obrigatorio")
     private String login;
 
-    @NotBlank(message = "A senha e obrigatoria")
+    @NotBlank(message = "A senha é obrigatoria")
     private String senha;
 
     public String getLogin() {

@@ -34,6 +34,7 @@ public class AlunaRequest {
     private LocalDate dataNascimento;
 
     @NotBlank(message = "A senha e obrigatoria")
+    @Size(min = 6, message =  "A senha deve conter pelo menos 6 caracteres.")
     private String senhaInicial;
 
     @NotNull(message = "O status e obrigatorio")

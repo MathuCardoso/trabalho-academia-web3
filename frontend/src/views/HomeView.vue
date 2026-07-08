@@ -452,26 +452,4 @@
     .stat-card--blue { --card-accent: #60a5fa; }
     .stat-card--red { --card-accent: #f87171; }
     .stat-card--yellow { --card-accent: #facc15; }
-
-    @media (max-width: 1024px) {
-        .stats-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 640px) {
-        .dashboard-heading {
-            align-items: stretch;
-            flex-direction: column;
-        }
-
-        .checkin-button {
-            width: 100%;
-            flex-basis: 44px;
-        }
-
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-    }
 </style>

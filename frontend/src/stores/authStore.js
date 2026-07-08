@@ -8,7 +8,7 @@ export const useAuthStore = defineStore("auth", () => {
     const token = ref(localStorage.getItem("token") || null);
 
     const isAuthenticated = computed(() => {
-        return !!token.value;
+        return !!token.value && !!usuario.value;
     });
 
     async function login(login, senha) {
@@ -18,14 +18,13 @@ export const useAuthStore = defineStore("auth", () => {
         token.value = data.token;
 
         usuario.value = {
+            alunaId: data.alunaId,
+            professoraId: data.professoraId,
             id: data.usuarioId,
-            usuarioId: data.usuarioId,
             login: data.login,
             nome: data.nome,
             perfil: data.perfil,
             status: data.status,
-            alunaId: data.alunaId,
-            professoraId: data.professoraId,
         };
 
         localStorage.setItem("token", token.value);

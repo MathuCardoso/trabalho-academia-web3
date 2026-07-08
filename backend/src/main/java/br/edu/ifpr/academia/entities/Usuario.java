@@ -33,7 +33,7 @@ public class Usuario {
      * Para professora: CREF
      * Para admin: login proprio
      */
-    @NotBlank(message = "O login e obrigatorio")
+    @NotBlank(message = "O login é obrigatorio")
     @Column(nullable = false, unique = true)
     private String login;
 
@@ -43,7 +43,7 @@ public class Usuario {
      * Nunca salvar senha pura aqui.
      * Nunca retornar esse campo no JSON de login.
      */
-    @NotBlank(message = "A senha e obrigatoria")
+    @NotBlank(message = "A senha é obrigatoria")
     @Column(nullable = false)
     @JsonIgnore
     private String senha;
@@ -52,7 +52,7 @@ public class Usuario {
      * Perfil de acesso:
      * ADMIN, PROFESSORA ou ALUNA.
      */
-    @NotNull(message = "O perfil e obrigatorio")
+    @NotNull(message = "O perfil é obrigatorio")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PerfilUsuario perfil;

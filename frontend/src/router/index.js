@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import routes from "./routes";
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from "@/stores/authStore";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -11,6 +11,7 @@ router.beforeEach((to, from) => {
     const auth = useAuthStore();
 
     if (to.meta.requiresAuth && !auth.isAuthenticated) {
+        auth.logout();
         return "/login";
     }
 
@@ -19,7 +20,7 @@ router.beforeEach((to, from) => {
         auth.usuario?.perfil &&
         !to.meta.roles.includes(auth.usuario.perfil)
     ) {
-        return "/";
+        return "/403";
     }
 });
 

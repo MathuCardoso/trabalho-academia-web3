@@ -8,7 +8,7 @@
 
     const sideBarOptions = [
         {
-            name: "Dashboard",
+            name: "Home",
             route: "/",
             roles: ["ADMIN", "PROFESSORA", "ALUNA"],
         },

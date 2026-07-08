@@ -66,15 +66,14 @@
     const errors = ref({});
 
     async function createOrUpdate() {
-        let response = null;
         submitLoading.value = true;
         try {
             if (Aluna.value.id) {
                 const payload = { ...Aluna.value };
                 delete payload.senhaInicial;
-                response = await putAluna(payload);
+                await putAluna(payload);
             } else {
-                response = await postAluna(Aluna.value);
+                await postAluna(Aluna.value);
             }
         } catch (e) {
             errors.value = e.errors || { geral: e.message };
@@ -227,7 +226,7 @@
                         />
                     </div>
 
-                    <div class="gap-4 mb-5">
+                    <div class="flex gap-4 mb-5">
                         <Input
                             v-if="!Aluna.id"
                             :model="Aluna.senhaInicial"
@@ -236,9 +235,6 @@
                             type="password"
                             :error="errors['senhaInicial']"
                         />
-                    </div>
-
-                    <div class="gap-4 mb-5">
                         <Select
                             :model="Aluna.status"
                             label="Status"
@@ -310,7 +306,7 @@
                     >
                 </div>
                 <template #footer>
-                    <div class="buttons mt-2 flex gap-3">
+                    <div class="buttons mt-2 flex justify-center gap-3">
                         <Button
                             v-if="canManage"
                             @click="prepareUpdate(a.id)"
@@ -400,12 +396,5 @@
         width: 128px;
         min-height: 44px;
         flex: 0 0 128px;
-    }
-
-    @media (max-width: 640px) {
-        .list-toolbar {
-            align-items: stretch;
-            flex-direction: column;
-        }
     }
 </style>

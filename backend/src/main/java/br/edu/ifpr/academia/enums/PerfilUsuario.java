@@ -11,7 +11,7 @@ package br.edu.ifpr.academia.enums;
  *
  * ALUNA:
  * Acessa o painel da aluna e pode ver seus próprios dados, treino,
- * matrícula e frequência.
+ * frequência.
  */
 public enum PerfilUsuario {
     ADMIN,

@@ -6,8 +6,9 @@ export function useApi() {
     async function request(uri, options = {}) {
         let response;
 
+
         try {
-            response = await fetch(buildUrl(uri), {
+            response = await fetch(API_URL + uri, {
                 ...options,
                 headers: {
                     ...getHeaders(),
@@ -42,13 +43,6 @@ export function useApi() {
             status: response.status,
             data: data,
         };
-    }
-
-    function buildUrl(uri) {
-        const baseUrl = API_URL.replace(/\/+$/, "");
-        const path = uri.replace(/^\/+/, "");
-
-        return `${baseUrl}/${path}`;
     }
 
     function getHeaders() {
@@ -131,7 +125,8 @@ export function useApi() {
             method: "POST",
             body: JSON.stringify(fields || {}),
         });
-        if (!response.ok) throw errorResponse(response, "Erro ao criar registro.");
+        if (!response.ok)
+            throw errorResponse(response, "Erro ao criar registro.");
 
         return {
             success: true,
